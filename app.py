@@ -19,6 +19,7 @@ from web.models.database import db, User, SyncHistory, SyncLog
 from web.sync_manager import SyncManager
 from web.scheduler import init_scheduler
 from web.nike_auth import nike_auth_bp
+from web.auto_migrate import auto_migrate_database
 from flask_migrate import Migrate
 
 
@@ -80,6 +81,10 @@ def create_app(config=None):
         with app.app_context():
             db.create_all()
             logger.info("Database initialized successfully")
+            
+            # Auto-migração: adiciona colunas que faltam
+            auto_migrate_database(db)
+            
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
         # Não falhar completamente, deixa app iniciar
@@ -143,6 +148,45 @@ def create_app(config=None):
             return redirect(url_for('login'))
         
         return render_template('register.html')
+    
+    @app.route('/setup', methods=['GET', 'POST'])
+    def setup():
+        """
+        Rota de setup para criar o primeiro admin
+        Acessível apenas se não houver admins no sistema
+        """
+        # Verifica se já existe algum admin
+        existing_admin = User.query.filter_by(is_admin=True).first()
+        if existing_admin:
+            flash('Já existe um administrador no sistema.', 'info')
+            return redirect(url_for('login'))
+        
+        if request.method == 'POST':
+            email = request.form.get('email')
+            setup_key = request.form.get('setup_key')
+            
+            # Verifica senha de setup (env var ADMIN_SETUP_PASSWORD ou padrão)
+            expected_key = os.getenv('ADMIN_SETUP_PASSWORD', 'admin123')
+            
+            if setup_key != expected_key:
+                flash('Chave de setup inválida.', 'danger')
+                return render_template('setup.html')
+            
+            # Busca usuário por email
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                flash('Usuário não encontrado. Por favor, registre-se primeiro.', 'warning')
+                return redirect(url_for('register'))
+            
+            # Torna admin
+            user.is_admin = True
+            db.session.commit()
+            
+            logger.info(f"🎉 First admin created: {user.email}")
+            flash(f'Parabéns! {user.email} agora é administrador.', 'success')
+            return redirect(url_for('login'))
+        
+        return render_template('setup.html')
     
     @app.route('/login', methods=['GET', 'POST'])
     def login():

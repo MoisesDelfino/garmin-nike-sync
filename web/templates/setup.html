@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Admin - Garmin Nike Sync{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">
+                    <i class="bi bi-shield-lock"></i>
+                    Setup Admin
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Primeiro Acesso</strong><br>
+                    Configure o primeiro administrador do sistema.
+                </div>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="bi bi-envelope"></i>
+                            Email do Usuário
+                        </label>
+                        <input type="email" 
+                               class="form-control" 
+                               id="email" 
+                               name="email" 
+                               required
+                               placeholder="seu@email.com">
+                        <div class="form-text">
+                            Digite o email da conta que deseja tornar administrador.<br>
+                            <strong>Atenção:</strong> A conta deve estar registrada primeiro.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="setup_key" class="form-label">
+                            <i class="bi bi-key"></i>
+                            Chave de Setup
+                        </label>
+                        <input type="password" 
+                               class="form-control" 
+                               id="setup_key" 
+                               name="setup_key" 
+                               required
+                               placeholder="Chave secreta de setup">
+                        <div class="form-text">
+                            Informe a chave de setup (variável de ambiente <code>ADMIN_SETUP_PASSWORD</code>).
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="bi bi-shield-check"></i>
+                            Criar Admin
+                        </button>
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-person-plus"></i>
+                            Registrar Nova Conta
+                        </a>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                            Já tenho conta
+                        </a>
+                    </div>
+                </form>
+
+                <hr class="my-4">
+
+                <div class="alert alert-secondary small mb-0">
+                    <i class="bi bi-lightbulb"></i>
+                    <strong>Como obter a chave de setup?</strong><br>
+                    <ul class="mb-0 mt-2">
+                        <li>Render.com: Dashboard → Environment → <code>ADMIN_SETUP_PASSWORD</code></li>
+                        <li>Local: arquivo <code>.env</code> → <code>ADMIN_SETUP_PASSWORD=...</code></li>
+                        <li>Padrão (se não configurada): <code>admin123</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <small class="text-muted">
+                Esta página só está acessível se não houver admins no sistema.
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}
