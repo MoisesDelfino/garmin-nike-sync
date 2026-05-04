@@ -20,6 +20,7 @@ from web.sync_manager import SyncManager
 from web.scheduler import init_scheduler
 from web.nike_auth import nike_auth_bp
 from src.nike_client import NikeClient
+from flask_migrate import Migrate
 
 
 def create_app(config=None):
@@ -60,6 +61,10 @@ def create_app(config=None):
     # Inicializa extensões
     db.init_app(app)
     logger.info("SQLAlchemy initialized")
+    
+    # Flask-Migrate para migrações de banco
+    migrate = Migrate(app, db)
+    logger.info("Flask-Migrate initialized")
     
     # Flask-Login
     login_manager = LoginManager()

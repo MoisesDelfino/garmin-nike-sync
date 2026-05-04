@@ -5,8 +5,8 @@ services:
     region: oregon
     plan: free
     runtime: python-3.10.0
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile - --log-level info
+    buildCommand: pip install -r requirements.txt && chmod +x migrate.sh
+    startCommand: ./migrate.sh && gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile - --log-level info
     envVars:
       - key: SECRET_KEY
         generateValue: true
