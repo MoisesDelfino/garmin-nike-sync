@@ -190,6 +190,18 @@ class SyncManager:
                 db.session.commit()
                 
                 raise
+            
+            finally:
+                # Garante que o log seja finalizado mesmo em casos de exceção não tratada
+                try:
+                    if sync_log.finished_at is None:
+                        sync_log.finished_at = datetime.utcnow()
+                        sync_log.status = 'error'
+                        sync_log.message = 'Processo interrompido inesperadamente'
+                        db.session.commit()
+                        logger.warning(f"SyncLog finalizado no finally para user {user.id}")
+                except Exception as e:
+                    logger.error(f"Erro ao finalizar SyncLog no finally: {e}")
     
     def _save_sync_history(self, user, stats, synchronizer):
         """
@@ -289,3 +301,40 @@ class SyncManager:
             logger.info(f"Sync completed for {len(results)} users")
             
             return results
+    
+    def cleanup_orphaned_logs(self, timeout_minutes=10):
+        """
+        Limpa logs que ficaram em estado 'running' por muito tempo
+        Considera órfãos logs que estão rodando há mais de {timeout_minutes} minutos
+        
+        Args:
+            timeout_minutes: Minutos para considerar um log órfão
+            
+        Returns:
+            Número de logs limpos
+        """
+        with self.app.app_context():
+            timeout_threshold = datetime.utcnow() - timedelta(minutes=timeout_minutes)
+            
+            # Busca logs órfãos
+            orphaned_logs = SyncLog.query.filter(
+                SyncLog.status == 'running',
+                SyncLog.started_at < timeout_threshold
+            ).all()
+            
+            if not orphaned_logs:
+                logger.info("✓ Nenhum log órfão encontrado")
+                return 0
+            
+            logger.info(f"🧹 Limpando {len(orphaned_logs)} logs órfãos...")
+            
+            for log in orphaned_logs:
+                log.finished_at = datetime.utcnow()
+                log.status = 'timeout'
+                log.message = f'Processo travou/timeout após {timeout_minutes} minutos'
+                logger.info(f"  ✓ Log #{log.id} marcado como timeout (user_id={log.user_id})")
+            
+            db.session.commit()
+            
+            logger.success(f"✓ {len(orphaned_logs)} logs órfãos limpos")
+            return len(orphaned_logs)

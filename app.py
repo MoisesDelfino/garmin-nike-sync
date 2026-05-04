@@ -533,6 +533,22 @@ def create_app(config=None):
                              nike_email=nike_email,
                              nike_password=nike_password)
     
+    @app.route('/admin/logs/cleanup', methods=['POST'])
+    @login_required
+    @admin_required
+    def admin_logs_cleanup():
+        """Limpa logs órfãos que ficaram em estado 'running'"""
+        try:
+            manager = SyncManager(app)
+            cleaned = manager.cleanup_orphaned_logs(timeout_minutes=10)
+            
+            flash(f'✓ {cleaned} logs órfãos foram limpos!', 'success')
+        except Exception as e:
+            logger.error(f"Erro ao limpar logs: {e}")
+            flash(f'Erro ao limpar logs: {str(e)}', 'error')
+        
+        return redirect(url_for('admin_logs'))
+    
     @app.route('/admin/logs')
     @login_required
     @admin_required
