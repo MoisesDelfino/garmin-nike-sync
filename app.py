@@ -76,6 +76,18 @@ def create_app(config=None):
     def load_user(user_id):
         return User.query.get(int(user_id))
     
+    # Decorator para rotas admin
+    def admin_required(f):
+        """Decorator para rotas que requerem admin"""
+        from functools import wraps
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated or not current_user.is_admin:
+                flash('Acesso negado. Apenas administradores.', 'error')
+                return redirect(url_for('index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    
     # Cria tabelas (com tratamento de erro)
     try:
         with app.app_context():
@@ -431,17 +443,6 @@ def create_app(config=None):
         })
     
     # ============= ADMIN ROUTES =============
-    
-    def admin_required(f):
-        """Decorator para rotas que requerem admin"""
-        from functools import wraps
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated or not current_user.is_admin:
-                flash('Acesso negado. Apenas administradores.', 'error')
-                return redirect(url_for('index'))
-            return f(*args, **kwargs)
-        return decorated_function
     
     @app.route('/admin')
     @login_required
