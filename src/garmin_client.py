@@ -4,10 +4,12 @@ Usa a biblioteca garth para autenticação e busca de atividades
 """
 
 import os
+import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from loguru import logger
 import garth
+from requests.exceptions import HTTPError
 
 
 class GarminClient:
@@ -26,44 +28,80 @@ class GarminClient:
         self.client = None
         self._authenticated = False
         
-    def authenticate(self) -> bool:
+    def authenticate(self, max_retries: int = 3) -> bool:
         """
-        Autentica no Garmin Connect
+        Autentica no Garmin Connect com retry inteligente
         
+        Args:
+            max_retries: Número máximo de tentativas
+            
         Returns:
             True se autenticado com sucesso
+            
+        Raises:
+            Exception: Com mensagem específica do erro
         """
-        try:
-            logger.info(f"Autenticando no Garmin Connect com email: {self.email}")
-            
-            # Tenta carregar sessão salva
-            session_dir = ".garth"
-            if os.path.exists(session_dir):
-                try:
-                    garth.resume(session_dir)
-                    # Testa se a sessão ainda é válida
-                    garth.connectapi("/userprofile-service/userprofile")
-                    logger.info("Sessão Garmin restaurada do cache e válida")
-                    self._authenticated = True
-                    return True
-                except Exception as e:
-                    logger.warning(f"Sessão expirada ou inválida, fazendo novo login: {e}")
-            
-            # Nova autenticação
-            logger.info("Fazendo login no Garmin Connect...")
-            garth.login(self.email, self.password)
-            garth.save(session_dir)
-            
-            logger.success("Autenticado com sucesso no Garmin Connect")
-            self._authenticated = True
-            return True
-            
-        except Exception as e:
-            logger.error(f"Erro ao autenticar no Garmin: {type(e).__name__}: {e}")
-            logger.error(f"Email tentado: {self.email}")
-            logger.error("Verifique se o email e senha estão corretos")
-            self._authenticated = False
-            return False
+        logger.info(f"Autenticando no Garmin Connect com email: {self.email}")
+        
+        # Tenta carregar sessão salva
+        session_dir = ".garth"
+        if os.path.exists(session_dir):
+            try:
+                garth.resume(session_dir)
+                # Testa se a sessão ainda é válida
+                garth.connectapi("/userprofile-service/userprofile")
+                logger.success("✓ Sessão Garmin restaurada do cache e válida")
+                self._authenticated = True
+                return True
+            except Exception as e:
+                # Verifica se é erro 429
+                error_str = str(e)
+                if "429" in error_str or "Too Many Requests" in error_str:
+                    logger.warning(f"⚠️ Garmin rate limit atingido ao validar sessão. Aguardando...")
+                    raise Exception("RATE_LIMIT: O Garmin está temporariamente bloqueando requisições. Aguarde 15-30 minutos e tente novamente.")
+                logger.warning(f"Sessão expirada ou inválida, tentando novo login: {e}")
+        
+        # Nova autenticação com retry e exponential backoff
+        for attempt in range(1, max_retries + 1):
+            try:
+                if attempt > 1:
+                    # Exponential backoff: 5s, 15s, 45s
+                    wait_time = 5 * (3 ** (attempt - 2))
+                    logger.info(f"⏳ Tentativa {attempt}/{max_retries} - Aguardando {wait_time}s...")
+                    time.sleep(wait_time)
+                
+                logger.info(f"Fazendo login no Garmin Connect... (tentativa {attempt}/{max_retries})")
+                garth.login(self.email, self.password)
+                garth.save(session_dir)
+                
+                logger.success("✓ Autenticado com sucesso no Garmin Connect")
+                self._authenticated = True
+                return True
+                
+            except Exception as e:
+                error_str = str(e)
+                error_type = type(e).__name__
+                
+                # Detecta erro 429 (Rate Limit)
+                if "429" in error_str or "Too Many Requests" in error_str:
+                    logger.error(f"❌ Garmin Rate Limit (429) - Tentativa {attempt}/{max_retries}")
+                    if attempt == max_retries:
+                        raise Exception("RATE_LIMIT: O Garmin está temporariamente bloqueando requisições devido a muitas tentativas. Aguarde 15-30 minutos antes de tentar novamente.")
+                    continue
+                
+                # Detecta credenciais inválidas
+                if "401" in error_str or "403" in error_str or "Unauthorized" in error_str:
+                    logger.error(f"❌ Credenciais inválidas - Email: {self.email}")
+                    raise Exception("INVALID_CREDENTIALS: Email ou senha incorretos. Verifique suas credenciais na página de Configurações.")
+                
+                # Outros erros
+                logger.error(f"❌ Erro ao autenticar (tentativa {attempt}/{max_retries}): {error_type}: {e}")
+                if attempt == max_retries:
+                    logger.error(f"Email tentado: {self.email}")
+                    raise Exception(f"Erro ao conectar com Garmin Connect: {error_str}")
+        
+        self._authenticated = False
+        raise Exception("Falha na autenticação após múltiplas tentativas.")
     
     def get_activities(self, start_date: Optional[datetime] = None, 
                        limit: int = 100) -> List[Dict]:

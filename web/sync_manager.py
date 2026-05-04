@@ -96,8 +96,22 @@ class SyncManager:
                 
                 # Testa conexões
                 logger.info("Testando autenticação Garmin...")
-                if not garmin.authenticate():
-                    raise Exception("Falha na autenticação Garmin. Verifique suas credenciais na página de Configurações.")
+                try:
+                    garmin.authenticate()
+                except Exception as garmin_error:
+                    error_msg = str(garmin_error)
+                    
+                    # Erro de rate limit (429)
+                    if "RATE_LIMIT" in error_msg:
+                        raise Exception("⏳ O Garmin está temporariamente bloqueando requisições devido a muitas tentativas. Por favor, aguarde 15-30 minutos e tente novamente.")
+                    
+                    # Credenciais inválidas
+                    elif "INVALID_CREDENTIALS" in error_msg:
+                        raise Exception("🔑 Email ou senha do Garmin incorretos. Verifique suas credenciais na página de Configurações.")
+                    
+                    # Outros erros
+                    else:
+                        raise Exception(f"Erro ao conectar com Garmin: {error_msg}")
                 
                 logger.info("Testando conexão Nike...")
                 if not nike.test_connection():
