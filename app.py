@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
+from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from loguru import logger
 import sys
@@ -400,6 +401,116 @@ def create_app(config=None):
         except Exception as e:
             logger.error(f"Manual sync error for user {current_user.id}: {e}")
             return jsonify({'error': str(e)}), 500
+    
+    @app.route('/dashboard/upload')
+    @login_required
+    def upload_page():
+        """Página de upload manual de atividades"""
+        if not current_user.nike_configured():
+            flash('Configure seu token Nike primeiro nas Credenciais', 'warning')
+            return redirect(url_for('credentials'))
+        
+        return render_template('upload.html', user=current_user)
+    
+    @app.route('/upload/process', methods=['POST'])
+    @login_required
+    def upload_process():
+        """Processa arquivos de atividades enviados"""
+        if not current_user.nike_configured():
+            return jsonify({'error': 'Token Nike não configurado'}), 400
+        
+        # Verifica se há arquivos
+        if 'files' not in request.files:
+            return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+        
+        files = request.files.getlist('files')
+        if not files or len(files) == 0:
+            return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+        
+        # Importa parser e clientes
+        from src.file_parser import ActivityParser, validate_activity
+        from src.nike_client import NikeClient
+        
+        # Inicializa cliente Nike
+        nike_token = current_user.get_nike_token()
+        nike_client = NikeClient(nike_token)
+        
+        results = []
+        success_count = 0
+        error_count = 0
+        
+        for file in files:
+            filename = secure_filename(file.filename)
+            
+            try:
+                # Lê conteúdo do arquivo
+                file_content = file.read()
+                
+                # Parse do arquivo
+                logger.info(f"Parsing file: {filename}")
+                activity = ActivityParser.parse_file(file_content, filename)
+                
+                # Valida atividade
+                if not validate_activity(activity):
+                    raise ValueError("Atividade com dados inválidos")
+                
+                # Converte para formato Nike
+                nike_activity = {
+                    'type': activity['type'],
+                    'start_time': activity['start_time'].isoformat(),
+                    'duration_seconds': activity['duration_seconds'],
+                    'distance_meters': activity['distance_meters'],
+                    'calories': activity.get('calories'),
+                    'avg_heart_rate': activity.get('avg_heart_rate')
+                }
+                
+                # Envia para Nike
+                logger.info(f"Uploading {filename} to Nike...")
+                response = nike_client.upload_activity(**nike_activity)
+                
+                # Registra no histórico
+                sync_history = SyncHistory(
+                    user_id=current_user.id,
+                    garmin_activity_id=f"upload_{filename}",
+                    nike_activity_id=response.get('id', 'unknown'),
+                    activity_name=filename,
+                    activity_type=activity['type'],
+                    distance=activity['distance_meters'] / 1000,  # km
+                    duration=int(activity['duration_seconds']),
+                    synced_at=datetime.utcnow()
+                )
+                db.session.add(sync_history)
+                
+                results.append({
+                    'filename': filename,
+                    'status': 'success',
+                    'message': f'Atividade enviada com sucesso! {activity["distance_meters"]/1000:.2f}km em {int(activity["duration_seconds"]/60)}min'
+                })
+                success_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error processing {filename}: {e}")
+                results.append({
+                    'filename': filename,
+                    'status': 'error',
+                    'message': str(e)
+                })
+                error_count += 1
+        
+        # Commit das alterações
+        try:
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Error committing sync history: {e}")
+            db.session.rollback()
+        
+        return jsonify({
+            'success': success_count > 0,
+            'total': len(files),
+            'success_count': success_count,
+            'error_count': error_count,
+            'results': results
+        })
     
     @app.route('/api/history')
     @login_required

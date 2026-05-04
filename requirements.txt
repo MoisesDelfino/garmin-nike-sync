@@ -13,6 +13,11 @@ python-dotenv==1.0.0
 # Date/time handling
 python-dateutil==2.8.2
 
+# File parsing (for manual upload)
+fitparse==1.2.0
+gpxpy==1.6.2
+lxml==5.1.0
+
 # Web Framework
 Flask==3.0.0
 Flask-SQLAlchemy==3.1.1

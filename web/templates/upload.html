@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Manual - Garmin → Nike Sync{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-upload"></i> Upload Manual de Atividades
+            </h2>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar ao Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Informações -->
+<div class="alert alert-info" role="alert">
+    <h5 class="alert-heading"><i class="bi bi-info-circle-fill"></i> Como funciona?</h5>
+    <ol class="mb-0">
+        <li>Exporte suas atividades do <strong>Garmin Connect</strong> (formatos .FIT, .TCX ou .GPX)</li>
+        <li>Faça upload dos arquivos aqui</li>
+        <li>Clique em "Enviar para Nike Run Club"</li>
+        <li>Pronto! Suas atividades serão sincronizadas sem usar a API do Garmin</li>
+    </ol>
+    <hr>
+    <small class="text-muted">
+        <strong>💡 Dica:</strong> Para exportar do Garmin Connect, acesse uma atividade → ⚙️ (Configurações) → "Exportar Original" ou "Exportar para TCX/GPX"
+    </small>
+</div>
+
+<!-- Área de Upload -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title mb-4">
+            <i class="bi bi-file-earmark-arrow-up"></i> Selecione os Arquivos
+        </h5>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            <!-- Drop Zone -->
+            <div id="dropZone" class="border border-2 border-dashed rounded p-5 text-center mb-3"
+                 style="cursor: pointer; transition: all 0.3s;">
+                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
+                <p class="mt-3 mb-2 h5">Arraste arquivos aqui ou clique para selecionar</p>
+                <p class="text-muted mb-0">
+                    Formatos aceitos: <strong>.FIT</strong>, <strong>.TCX</strong>, <strong>.GPX</strong>
+                </p>
+                <input type="file" id="fileInput" name="files" multiple 
+                       accept=".fit,.FIT,.tcx,.TCX,.gpx,.GPX" 
+                       style="display: none;">
+            </div>
+            
+            <!-- Lista de Arquivos Selecionados -->
+            <div id="fileList" class="mb-3" style="display: none;">
+                <h6 class="mb-3">Arquivos Selecionados:</h6>
+                <div id="fileListContent" class="list-group"></div>
+            </div>
+            
+            <!-- Botão de Envio -->
+            <div class="d-grid gap-2">
+                <button type="submit" id="btnUpload" class="btn btn-primary btn-lg" disabled>
+                    <i class="bi bi-send-fill"></i> Enviar para Nike Run Club
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Progresso -->
+<div id="progressSection" class="mt-4" style="display: none;">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">
+                <i class="bi bi-hourglass-split"></i> Processando...
+            </h5>
+            <div class="progress mb-2" style="height: 25px;">
+                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" style="width: 0%;">0%</div>
+            </div>
+            <p id="progressText" class="text-muted mb-0">Aguarde...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Resultados -->
+<div id="resultsSection" class="mt-4" style="display: none;">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">
+                <i class="bi bi-check-circle-fill text-success"></i> Resultado do Upload
+            </h5>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+#dropZone:hover {
+    background-color: #f8f9fa;
+    border-color: #6610f2 !important;
+}
+
+#dropZone.drag-over {
+    background-color: #e7f3ff;
+    border-color: #0d6efd !important;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.file-item .badge {
+    font-size: 0.75rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const fileListContent = document.getElementById('fileListContent');
+    const btnUpload = document.getElementById('btnUpload');
+    const uploadForm = document.getElementById('uploadForm');
+    const progressSection = document.getElementById('progressSection');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsContent = document.getElementById('resultsContent');
+    
+    let selectedFiles = [];
+    
+    // Click na drop zone abre seletor
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    // Drag & Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        handleFiles(e.dataTransfer.files);
+    });
+    
+    // Seleção via input
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+    
+    function handleFiles(files) {
+        selectedFiles = Array.from(files);
+        
+        if (selectedFiles.length === 0) {
+            fileList.style.display = 'none';
+            btnUpload.disabled = true;
+            return;
+        }
+        
+        // Mostra lista
+        fileList.style.display = 'block';
+        btnUpload.disabled = false;
+        
+        // Renderiza arquivos
+        fileListContent.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const ext = file.name.split('.').pop().toUpperCase();
+            const size = (file.size / 1024).toFixed(1) + ' KB';
+            
+            const item = document.createElement('div');
+            item.className = 'list-group-item file-item';
+            item.innerHTML = `
+                <div>
+                    <i class="bi bi-file-earmark-text text-primary"></i>
+                    <strong>${file.name}</strong>
+                    <span class="badge bg-secondary ms-2">${ext}</span>
+                    <small class="text-muted ms-2">${size}</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            `;
+            fileListContent.appendChild(item);
+        });
+    }
+    
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        handleFiles(selectedFiles);
+    };
+    
+    // Submit do form
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (selectedFiles.length === 0) return;
+        
+        // Esconde resultados anteriores
+        resultsSection.style.display = 'none';
+        
+        // Mostra progresso
+        progressSection.style.display = 'block';
+        btnUpload.disabled = true;
+        
+        // Cria FormData
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+            formData.append('files', file);
+        });
+        
+        try {
+            progressText.textContent = `Enviando ${selectedFiles.length} arquivo(s)...`;
+            
+            const response = await fetch('{{ url_for("upload_process") }}', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            // Esconde progresso
+            progressSection.style.display = 'none';
+            
+            // Mostra resultado
+            resultsSection.style.display = 'block';
+            displayResults(result);
+            
+            // Limpa seleção se sucesso
+            if (result.success) {
+                selectedFiles = [];
+                fileInput.value = '';
+                fileList.style.display = 'none';
+            }
+            
+        } catch (error) {
+            progressSection.style.display = 'none';
+            resultsSection.style.display = 'block';
+            resultsContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>Erro:</strong> ${error.message}
+                </div>
+            `;
+        } finally {
+            btnUpload.disabled = false;
+        }
+    });
+    
+    function displayResults(result) {
+        if (result.error) {
+            resultsContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>Erro:</strong> ${result.error}
+                </div>
+            `;
+            return;
+        }
+        
+        const { success_count, error_count, total, results } = result;
+        
+        let html = `
+            <div class="alert ${error_count > 0 ? 'alert-warning' : 'alert-success'}">
+                <strong>Processamento concluído!</strong><br>
+                ✅ Sucesso: ${success_count} de ${total}<br>
+                ${error_count > 0 ? `❌ Erros: ${error_count}` : ''}
+            </div>
+        `;
+        
+        // Detalhes
+        html += '<div class="list-group">';
+        results.forEach(r => {
+            const icon = r.status === 'success' ? 'check-circle-fill text-success' : 'x-circle-fill text-danger';
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-${icon} me-2"></i>
+                        <div>
+                            <strong>${r.filename}</strong><br>
+                            <small class="text-muted">${r.message}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        resultsContent.innerHTML = html;
+    }
+});
+</script>
+{% endblock %}
