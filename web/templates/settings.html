@@ -34,15 +34,29 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="historical_days" class="form-label">
-                            Dias de Histórico (primeira sincronização)
-                        </label>
-                        <input type="number" class="form-control" id="historical_days" 
-                               name="historical_days" value="{{ current_user.historical_days }}" 
-                               min="1" max="730">
-                        <div class="form-text">
-                            Quantos dias de histórico sincronizar na primeira vez (padrão: 365)
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="initial_sync_start_date" class="form-label">
+                                Data Inicial (primeira sincronização)
+                            </label>
+                            <input type="date" class="form-control" id="initial_sync_start_date" 
+                                   name="initial_sync_start_date" 
+                                   value="{{ current_user.initial_sync_start_date.strftime('%Y-%m-%d') if current_user.initial_sync_start_date else '' }}">
+                            <div class="form-text">
+                                A partir de qual data sincronizar atividades na primeira vez
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="initial_sync_end_date" class="form-label">
+                                Data Final (primeira sincronização)
+                            </label>
+                            <input type="date" class="form-control" id="initial_sync_end_date" 
+                                   name="initial_sync_end_date" 
+                                   value="{{ current_user.initial_sync_end_date.strftime('%Y-%m-%d') if current_user.initial_sync_end_date else '' }}">
+                            <div class="form-text">
+                                Até qual data sincronizar atividades (deixe vazio para hoje)
+                            </div>
                         </div>
                     </div>
                 </div>

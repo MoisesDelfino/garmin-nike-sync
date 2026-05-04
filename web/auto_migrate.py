@@ -29,7 +29,9 @@ def auto_migrate_database(db):
             'nike_status': "VARCHAR(20) DEFAULT 'pending'",
             'nike_status_message': 'TEXT',
             'nike_configured_at': 'TIMESTAMP',
-            'is_admin': 'BOOLEAN DEFAULT FALSE'
+            'is_admin': 'BOOLEAN DEFAULT FALSE',
+            'initial_sync_start_date': 'DATE',
+            'initial_sync_end_date': 'DATE'
         }
         
         # Verifica colunas existentes

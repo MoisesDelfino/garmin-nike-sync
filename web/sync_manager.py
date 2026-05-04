@@ -135,7 +135,16 @@ class SyncManager:
                 
                 if is_first_sync:
                     logger.info(f"First sync for {user.email} - syncing history")
-                    stats = sync.sync_historical(days=user.historical_days)
+                    
+                    # Usa datas se configuradas, senão usa historical_days
+                    if user.initial_sync_start_date and user.initial_sync_end_date:
+                        from datetime import datetime
+                        start = datetime.combine(user.initial_sync_start_date, datetime.min.time())
+                        end = datetime.combine(user.initial_sync_end_date, datetime.max.time())
+                        stats = sync.sync_historical(start_date=start, end_date=end)
+                    else:
+                        # Fallback para o método antigo (dias)
+                        stats = sync.sync_historical(days=user.historical_days)
                 else:
                     logger.info(f"Syncing new activities for {user.email}")
                     stats = sync.sync_new_activities()

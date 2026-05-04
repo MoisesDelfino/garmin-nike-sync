@@ -340,7 +340,24 @@ def create_app(config=None):
             data = request.form
             
             current_user.sync_enabled = 'sync_enabled' in data
-            current_user.historical_days = int(data.get('historical_days', 365))
+            
+            # Processar datas de sincronização inicial
+            start_date_str = data.get('initial_sync_start_date', '').strip()
+            end_date_str = data.get('initial_sync_end_date', '').strip()
+            
+            if start_date_str:
+                from datetime import datetime
+                current_user.initial_sync_start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            else:
+                current_user.initial_sync_start_date = None
+            
+            if end_date_str:
+                from datetime import datetime
+                current_user.initial_sync_end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            else:
+                current_user.initial_sync_end_date = None
+            
+            # Manter historical_days por compatibilidade (não é mais exibido, mas mantém valor)
             current_user.time_tolerance = int(data.get('time_tolerance', 300))
             current_user.distance_tolerance = int(data.get('distance_tolerance', 50))
             

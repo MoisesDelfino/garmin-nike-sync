@@ -57,7 +57,9 @@ class User(UserMixin, db.Model):
     
     # Configurações de sincronização
     sync_enabled = db.Column(db.Boolean, default=True)
-    historical_days = db.Column(db.Integer, default=365)
+    historical_days = db.Column(db.Integer, default=365)  # DEPRECATED: manter por compatibilidade
+    initial_sync_start_date = db.Column(db.Date)  # Data inicial para primeira sincronização
+    initial_sync_end_date = db.Column(db.Date)  # Data final para primeira sincronização
     time_tolerance = db.Column(db.Integer, default=300)  # segundos
     distance_tolerance = db.Column(db.Integer, default=50)  # metros
     
@@ -171,6 +173,8 @@ class User(UserMixin, db.Model):
             'last_sync_status': self.last_sync_status,
             'settings': {
                 'historical_days': self.historical_days,
+                'initial_sync_start_date': self.initial_sync_start_date.isoformat() if self.initial_sync_start_date else None,
+                'initial_sync_end_date': self.initial_sync_end_date.isoformat() if self.initial_sync_end_date else None,
                 'time_tolerance': self.time_tolerance,
                 'distance_tolerance': self.distance_tolerance
             }

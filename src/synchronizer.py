@@ -92,17 +92,28 @@ class Synchronizer:
         }
         self._save_history()
     
-    def sync_historical(self, days: int = 365) -> Dict[str, int]:
+    def sync_historical(self, days: int = None, start_date: datetime = None, end_date: datetime = None) -> Dict[str, int]:
         """
         Sincroniza atividades históricas
         
         Args:
-            days: Número de dias para buscar no histórico
+            days: Número de dias para buscar no histórico (deprecated, use start_date/end_date)
+            start_date: Data inicial para buscar atividades (opcional)
+            end_date: Data final para buscar atividades (opcional)
             
         Returns:
             Estatísticas da sincronização
         """
-        logger.info(f"Iniciando sincronização histórica (últimos {days} dias)")
+        # Se start_date/end_date não fornecidos, usa days (compatibilidade)
+        if start_date is None:
+            if days is None:
+                days = 365
+            start_date = datetime.now() - timedelta(days=days)
+            logger.info(f"Iniciando sincronização histórica (últimos {days} dias)")
+        else:
+            if end_date is None:
+                end_date = datetime.now()
+            logger.info(f"Iniciando sincronização histórica de {start_date.strftime('%d/%m/%Y')} até {end_date.strftime('%d/%m/%Y')}")
         
         stats = {
             'total': 0,
@@ -113,7 +124,6 @@ class Synchronizer:
         }
         
         # Busca atividades do Garmin
-        start_date = datetime.now() - timedelta(days=days)
         garmin_activities = self.garmin.get_activities(start_date=start_date, limit=1000)
         
         if not garmin_activities:
