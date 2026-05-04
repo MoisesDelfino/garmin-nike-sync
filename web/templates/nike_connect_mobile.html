@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conectar Nike - Mobile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .card { 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: none;
+            border-radius: 20px;
+        }
+        .step {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .step.active {
+            border: 3px solid #0d6efd;
+        }
+        .btn-huge {
+            padding: 20px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 15px;
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 class="text-white mb-2">⚡ Conectar Nike</h2>
+            <p class="text-white-50">Versão Mobile Simplificada</p>
+        </div>
+
+        <!-- Passo 1: Abrir Nike -->
+        <div id="step1" class="step active">
+            <div class="text-center mb-3">
+                <span class="badge bg-primary fs-4">1</span>
+            </div>
+            <h4 class="text-center mb-3">Faça Login no Nike</h4>
+            <p class="text-center mb-4">Clique no botão abaixo para fazer login na sua conta Nike Run Club:</p>
+            
+            <a href="https://www.nike.com/member/settings" 
+               target="_blank" 
+               class="btn btn-primary btn-huge w-100 mb-3"
+               onclick="marcarLoginFeito()">
+                <i class="bi bi-box-arrow-up-right"></i><br>
+                ABRIR NIKE.COM
+            </a>
+            
+            <div class="alert alert-info mb-0">
+                <small>
+                    <i class="bi bi-info-circle-fill"></i>
+                    <strong>Importante:</strong> Faça login no Nike e depois <strong>volte para esta página</strong>
+                </small>
+            </div>
+        </div>
+
+        <!-- Passo 2: Capturar Token -->
+        <div id="step2" class="step" style="display: none;">
+            <div class="text-center mb-3">
+                <span class="badge bg-success fs-4">2</span>
+            </div>
+            <h4 class="text-center mb-3">Conectar Automaticamente</h4>
+            <p class="text-center mb-4">Já fez login no Nike? Clique no botão abaixo:</p>
+            
+            <button onclick="capturarTokenNike()" class="btn btn-success btn-huge w-100 pulse mb-3">
+                ✨ CONECTAR NIKE AGORA ✨
+            </button>
+            
+            <div class="alert alert-warning">
+                <small>
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    Se aparecer "Bloqueio de Popup", permita popups para este site e tente novamente.
+                </small>
+            </div>
+        </div>
+
+        <!-- Passo 3: Processando -->
+        <div id="step3" class="step" style="display: none;">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                <h5>Processando...</h5>
+                <p class="text-muted mb-0">Aguarde enquanto capturamos suas credenciais</p>
+            </div>
+        </div>
+
+        <!-- Passo 4: Sucesso -->
+        <div id="step4" class="step" style="display: none;">
+            <div class="text-center">
+                <div class="text-success mb-3" style="font-size: 4rem;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <h4 class="text-success mb-3">Nike Conectado!</h4>
+                <p class="mb-0">Redirecionando para o dashboard...</p>
+            </div>
+        </div>
+
+        <!-- Passo Erro -->
+        <div id="stepErro" class="step" style="display: none;">
+            <div class="text-center">
+                <div class="text-danger mb-3" style="font-size: 3rem;">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+                <h5 class="text-danger mb-3">Erro ao Conectar</h5>
+                <p id="mensagemErro" class="mb-3"></p>
+                <button onclick="resetarFluxo()" class="btn btn-primary">
+                    <i class="bi bi-arrow-clockwise"></i> Tentar Novamente
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let nikeWindow = null;
+        let checkInterval = null;
+
+        function marcarLoginFeito() {
+            // Espera 3 segundos e mostra o passo 2
+            setTimeout(() => {
+                document.getElementById('step1').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+            }, 3000);
+        }
+
+        function capturarTokenNike() {
+            // Esconde passo 2, mostra loading
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3').style.display = 'block';
+
+            // Método 1: Tenta abrir popup do Nike para extrair token
+            try {
+                nikeWindow = window.open(
+                    'https://www.nike.com/member/settings',
+                    'Nike',
+                    'width=400,height=600'
+                );
+
+                if (!nikeWindow) {
+                    throw new Error('Popup bloqueado');
+                }
+
+                // Aguarda 2 segundos e injeta script
+                setTimeout(() => {
+                    tentarInjetarScript();
+                }, 2000);
+
+            } catch (error) {
+                mostrarErro('Não foi possível abrir popup. Permita popups e tente novamente.');
+            }
+
+            // Timeout de 30 segundos
+            setTimeout(() => {
+                if (document.getElementById('step3').style.display !== 'none') {
+                    mostrarErro('Timeout: Não foi possível capturar o token. Tente novamente.');
+                }
+            }, 30000);
+        }
+
+        function tentarInjetarScript() {
+            try {
+                if (nikeWindow && !nikeWindow.closed) {
+                    // Tenta injetar script no popup
+                    const script = `
+                        (function() {
+                            const token = localStorage.getItem('access_token');
+                            if (token) {
+                                fetch('{{ request.url_root }}nike/callback', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({token: token})
+                                })
+                                .then(r => r.json())
+                                .then(d => {
+                                    if (d.success) {
+                                        window.opener.postMessage({success: true}, '*');
+                                    } else {
+                                        window.opener.postMessage({error: d.error}, '*');
+                                    }
+                                    window.close();
+                                })
+                                .catch(e => {
+                                    window.opener.postMessage({error: e.toString()}, '*');
+                                    window.close();
+                                });
+                            } else {
+                                window.opener.postMessage({error: 'Token não encontrado. Faça login primeiro.'}, '*');
+                            }
+                        })();
+                    `;
+                    
+                    nikeWindow.eval(script);
+                } else {
+                    // Popup foi fechado
+                    mostrarErro('Popup foi fechado. Tente novamente.');
+                }
+            } catch (error) {
+                // Cross-origin error - método alternativo
+                usarMetodoAlternativo();
+            }
+        }
+
+        function usarMetodoAlternativo() {
+            // Fecha popup se aberto
+            if (nikeWindow && !nikeWindow.closed) {
+                nikeWindow.close();
+            }
+
+            // Mostra instruções alternativas
+            document.getElementById('step3').style.display = 'none';
+            document.getElementById('step2').innerHTML = `
+                <div class="text-center mb-3">
+                    <span class="badge bg-warning fs-4">2</span>
+                </div>
+                <h5 class="text-center mb-3">Método Alternativo</h5>
+                <p class="mb-3">Cole este link na barra de endereço do Nike.com:</p>
+                
+                <div class="alert alert-dark mb-3" style="word-break: break-all; font-size: 0.85rem;">
+                    javascript:void(fetch('{{ request.url_root }}nike/callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:localStorage.getItem('access_token')})}).then(r=>r.json()).then(d=>alert(d.success?'✅ Conectado!':'❌ '+d.error)))
+                </div>
+                
+                <button onclick="copiarLink()" class="btn btn-warning btn-lg w-100 mb-3">
+                    <i class="bi bi-clipboard"></i> COPIAR LINK
+                </button>
+                
+                <div class="alert alert-info">
+                    <small>
+                        <strong>Como usar:</strong><br>
+                        1. Copie o link acima<br>
+                        2. Abra Nike.com em outra aba<br>
+                        3. Cole na barra de endereço<br>
+                        4. Pressione Enter
+                    </small>
+                </div>
+            `;
+            document.getElementById('step2').style.display = 'block';
+            
+            // Inicia polling para detectar sucesso
+            iniciarPolling();
+        }
+
+        function copiarLink() {
+            const link = "javascript:void(fetch('{{ request.url_root }}nike/callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:localStorage.getItem('access_token')})}).then(r=>r.json()).then(d=>alert(d.success?'✅ Conectado!':'❌ '+d.error)))";
+            
+            navigator.clipboard.writeText(link).then(() => {
+                const btn = event.target;
+                btn.innerHTML = '<i class="bi bi-check"></i> COPIADO!';
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-warning');
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="bi bi-clipboard"></i> COPIAR LINK';
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-warning');
+                }, 3000);
+            }).catch(() => {
+                alert('Erro ao copiar. Selecione o texto manualmente.');
+            });
+        }
+
+        function iniciarPolling() {
+            if (checkInterval) clearInterval(checkInterval);
+            
+            checkInterval = setInterval(() => {
+                fetch('{{ url_for("api_stats") }}')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.has_nike_token) {
+                            clearInterval(checkInterval);
+                            mostrarSucesso();
+                        }
+                    })
+                    .catch(() => {});
+            }, 2000);
+        }
+
+        // Recebe mensagem do popup
+        window.addEventListener('message', function(event) {
+            if (event.data.success) {
+                mostrarSucesso();
+            } else if (event.data.error) {
+                mostrarErro(event.data.error);
+            }
+        });
+
+        function mostrarSucesso() {
+            document.getElementById('step3').style.display = 'none';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step4').style.display = 'block';
+            
+            setTimeout(() => {
+                window.location.href = '{{ url_for("dashboard") }}';
+            }, 2000);
+        }
+
+        function mostrarErro(mensagem) {
+            document.getElementById('step3').style.display = 'none';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('stepErro').style.display = 'block';
+            document.getElementById('mensagemErro').textContent = mensagem;
+        }
+
+        function resetarFluxo() {
+            document.getElementById('stepErro').style.display = 'none';
+            document.getElementById('step1').style.display = 'block';
+            if (nikeWindow && !nikeWindow.closed) {
+                nikeWindow.close();
+            }
+        }
+    </script>
+</body>
+</html>
