@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fundo circular com gradiente -->
+  <circle cx="64" cy="64" r="58" fill="url(#grad)"/>
+  
+  <!-- Raio branco estilizado -->
+  <path d="M 70 20 L 45 64 L 58 64 L 38 108 L 80 70 L 64 70 Z" 
+        fill="white" 
+        stroke="none"/>
+</svg>
