@@ -539,8 +539,8 @@ try:
 except Exception as e:
     logger.error(f"FATAL: Failed to create app instance: {e}")
     logger.exception("Full traceback:")
-    import sys
-    sys.exit(1)
+    # Não usar sys.exit(1) aqui - deixa exceção propagar para gunicorn ver
+    raise
 
 
 # Ponto de entrada para desenvolvimento local
