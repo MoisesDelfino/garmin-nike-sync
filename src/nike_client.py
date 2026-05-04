@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Tuple
 from loguru import logger
 import json
 import base64
+import uuid
 
 
 class NikeClient:
@@ -406,8 +407,12 @@ class NikeClient:
         
         nike_type = activity_type_map.get(garmin_activity['type'], 'run')
         
+        # Gera ID único para a atividade
+        activity_id = str(uuid.uuid4())
+        
         # Monta payload Nike
         payload = {
+            'id': activity_id,
             'type': nike_type,
             'start_epoch_ms': start_epoch_ms,
             'end_epoch_ms': end_epoch_ms,
