@@ -18,6 +18,7 @@ load_dotenv()
 from web.models.database import db, User, SyncHistory, SyncLog
 from web.sync_manager import SyncManager
 from web.scheduler import init_scheduler
+from web.nike_auth import nike_auth_bp
 
 
 def create_app(config=None):
@@ -79,6 +80,9 @@ def create_app(config=None):
         except Exception as e:
             logger.error(f"Error initializing scheduler: {e}")
             # Não falhar completamente, deixa app iniciar
+    
+    # Registra blueprints
+    app.register_blueprint(nike_auth_bp)
     
     # ========== ROTAS ==========
     
