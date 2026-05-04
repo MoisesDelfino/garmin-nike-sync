@@ -108,36 +108,53 @@ Se o login funcionou, agora você precisa extrair o token:
 4. Clique em `https://www.nike.com`
 
 5. **Procure por estas chaves** (o Nike pode usar qualquer uma):
+   - `oidc.user:https://accounts.nike.com:...` ⭐ **MAIS COMUM** (chave longa OIDC)
    - `access_token`
    - `nike_access_token`
    - `token`
    - `auth_token`
    - `Authorization`
-   - Ou qualquer chave que contenha "token" ou "auth"
+   - Ou qualquer chave que contenha "token", "auth" ou "oidc"
 
-6. **Copie o valor** (coluna da direita)
-   - Clique com botão direito no valor
-   - Selecione "Copy"
+6. **Copie o valor** (coluna da direita):
+
+   **Se a chave for `oidc.user:https://accounts.nike.com:...`:**
+   - O valor é um **objeto JSON grande**
+   - Clique no valor para expandir
+   - Procure por `"id_token":"eyJ...` ou `"access_token":"eyJ...` dentro do JSON
+   - **Copie APENAS o token** (o texto que começa com `eyJ`)
+   - Exemplo: Se você ver `"id_token":"eyJhbGciOiJSUzI1NiIs..."`, copie apenas `eyJhbGciOiJSUzI1NiIs...`
+   
+   **Se a chave for `access_token` ou similar:**
+   - O valor já é o token direto
+   - Clique com botão direito no valor → "Copy"
    - Ou selecione o texto completo e pressione `Ctrl+C`
 
-7. ✅ Se encontrou um token longo (tipo JWT): **Pronto!**
+7. Lista TODAS as chaves do localStorage (COMECE POR AQUI!)
+Object.keys(localStorage)
 
-#### **Método 2: Console do Navegador (Se Método 1 não funcionar)**
+// Procure por chave que contenha "oidc.user" ou "accounts.nike.com"
+// Se encontrar algo como "oidc.user:https://accounts.nike.com:..."
+// Execute:
+JSON.parse(localStorage.getItem('oidc.user:https://accounts.nike.com:d42d5e78b78e6f85d8b5b5721bd51df'))
 
-1. **Abra o Console**: Pressione `F12` → aba **"Console"**
+// Isso vai mostrar o objeto JSON. Procure por "id_token" ou "access_token"
+// Copie o valor do token
 
-2. **Tente estes comandos** um por um até encontrar o token:
-
-```javascript
-// Tenta access_token
+// Se não encontrar OIDC, tente as chaves tradicionais:
 localStorage.getItem('access_token')
-
-// Tenta outras variações
 localStorage.getItem('nike_access_token')
 localStorage.getItem('token')
 localStorage.getItem('auth_token')
+```
 
-// Lista TODAS as chaves do localStorage
+3. Se usar `Object.keys(localStorage)`, procure por:
+   - Chaves que contenham `oidc.user` ou `accounts.nike.com` ← **MAIS PROVÁVEL**
+   - Chaves relacionadas a "token" ou "auth"
+
+4. **Para chaves OIDC**: Use `JSON.parse()` para ver o conteúdo, depois copie o `id_token` ou `access_token`
+
+5. **Para chaves simples**: Copie APENAS o conteúdo entre as aspas
 Object.keys(localStorage)
 
 // Mostra TODO o conteúdo do localStorage
@@ -206,6 +223,52 @@ Um token Nike válido geralmente:
 
 ---
 
+### **🔍 CASO ESPECIAL: Token dentro de objeto OIDC**
+
+Se você encontrou uma chave tipo `oidc.user:https://accounts.nike.com:...`:
+
+#### **Via Application Tab (Mais Fácil):**
+
+1. Clique na chave OIDC no localStorage
+2. O valor na direita é um JSON grande
+3. **Copie TODO o valor** (botão direito → Copy)
+4. Cole em um editor de texto (Notepad, VS Code, etc)
+5. Procure por `"id_token":"eyJ...` ou `"access_token":"eyJ...`
+6. **Copie APENAS o token** (entre as aspas após `id_token:`)
+7. Cole no campo do admin
+
+#### **Via Console (Alternativo):**
+
+```javascript
+// Liste as chaves para encontrar a chave OIDC exata
+Object.keys(localStorage)
+
+// Vai aparecer algo como:
+// "oidc.user:https://accounts.nike.com:d42d5e78b78e6f85d8b5b5721bd51df"
+
+// Copie o nome da chave e execute:
+let oidcData = JSON.parse(localStorage.getItem('oidc.user:https://accounts.nike.com:d42d5e78b78e6f85d8b5b5721bd51df'))
+
+// Veja o token:
+oidcData.id_token
+// ou
+oidcData.access_token
+
+// Copie o resultado (sem as aspas)
+```
+
+**Exemplo real do que você verá:**
+```json
+{
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEifQ...",  ← COPIE ISSO!
+  "access_token": "eyJhbGci...",
+  "profile": {...},
+  ...
+}
+```
+
+---
+
 ### **Passo 6: Insira o Token no Sistema**
 
 1. **Volte para a aba do admin** (página de detalhes do usuário)
@@ -265,12 +328,21 @@ E a sincronização automática começará a funcionar! 🎉
 4. Menu lateral → Local Storage → nike.com
    ┌────────────────────┬──────────────────────┐
    │ ▼ Local Storage    │ Key          Value   │
-   │   ▼ https://nike.. │ access_token eyJh... │ ← COPIE ISSO!
+   │   ▼ https://nike.. │ oidc.user:https://..│ ← PROCURE ESSA!
+   │                    │ access_token eyJh... │ ← OU ESSA!
    │                    │ user_id      12345   │
    │                    │ ...          ...     │
    └────────────────────┴──────────────────────┘
    ↓
-5. Copie o VALUE do access_token
+5. Se encontrou oidc.user:... (MAIS COMUM):
+   - Clique no valor → vai mostrar JSON grande
+   - Copie TODO o JSON
+   - Cole em editor de texto
+   - Procure "id_token":"eyJ..."
+   - Copie APENAS o eyJ... (sem aspas)
+   
+   Se encontrou access_token direto:
+   - Copie o valor direto
    ↓
 6. Cole no campo "Token Nike" no admin
    ↓
@@ -425,10 +497,13 @@ ADMIN                                    NIKE.COM
 | Problema | Solução |
 |----------|---------|
 | `localStorage.getItem()` retorna `null` | Use Método 1 (Application Tab) para ver todas as chaves, ou Método 3 (Network Tab) |
+| Encontrei `oidc.user:...` mas não sei o que fazer | Veja seção "CASO ESPECIAL: Token dentro de objeto OIDC" acima |
+| Valor do localStorage é um JSON gigante | É OIDC! Procure `"id_token":"eyJ..."` dentro do JSON |
 | Token com aspas | Remova as aspas antes de colar |
 | Token muito curto (<50 chars) | Não é o token certo, procure por um valor longo que comece com `eyJ` |
-| Não vê "access_token" no localStorage | Tente `nike_access_token`, `token`, `auth_token` ou use Método 3 (Network) |
+| Não vê "access_token" nem "oidc.user" | Tente `nike_access_token`, `token`, `auth_token` ou use Método 3 (Network) |
 | Erro "is not a function" no console | Certifique-se de copiar o comando corretamente, sem caracteres extras |
+| Erro ao fazer JSON.parse() | Copie o nome exato da chave OIDC (com dois-pontos e tudo) |
 | "Já existe admin" na /setup | Você já é admin, faça login normalmente |
 | Não vê link "Admin" no menu | Você não é admin ainda, use /setup primeiro |
 | Usuário não aparece pendente | Ele ainda não forneceu credenciais Nike |
