@@ -477,19 +477,24 @@ def create_app(config=None):
                             # Envia para Nike
                             response = nike_client.create_activity(nike_activity)
                             
-                            # Registra no histórico
-                            sync_history = SyncHistory(
-                                user_id=current_user.id,
-                                garmin_activity_id=f"csv_{activity['start_time'].strftime('%Y%m%d_%H%M%S')}",
-                                nike_activity_id=response or 'unknown',
-                                activity_name=activity.get('activity_name', 'CSV Import'),
-                                activity_type=activity['type'],
-                                distance=activity['distance_meters'] / 1000,
-                                duration=int(activity['duration_seconds']),
-                                synced_at=datetime.utcnow()
-                            )
-                            db.session.add(sync_history)
-                            csv_success += 1
+                            # Verifica se foi criada com sucesso
+                            if response:
+                                # Registra no histórico
+                                sync_history = SyncHistory(
+                                    user_id=current_user.id,
+                                    garmin_activity_id=f"csv_{activity['start_time'].strftime('%Y%m%d_%H%M%S')}",
+                                    nike_activity_id=response,
+                                    activity_name=activity.get('activity_name', 'CSV Import'),
+                                    activity_type=activity['type'],
+                                    distance=activity['distance_meters'] / 1000,
+                                    duration=int(activity['duration_seconds']),
+                                    synced_at=datetime.utcnow()
+                                )
+                                db.session.add(sync_history)
+                                csv_success += 1
+                            else:
+                                logger.error(f"Nike API rejeitou atividade: {activity.get('activity_name')}")
+                                csv_errors += 1
                             
                         except Exception as e:
                             logger.error(f"Error uploading activity from CSV: {e}")
@@ -535,25 +540,34 @@ def create_app(config=None):
                     logger.info(f"Uploading {filename} to Nike...")
                     response = nike_client.create_activity(nike_activity)
                     
-                    # Registra no histórico
-                    sync_history = SyncHistory(
-                        user_id=current_user.id,
-                        garmin_activity_id=f"upload_{filename}",
-                        nike_activity_id=response or 'unknown',
-                        activity_name=filename,
-                        activity_type=activity['type'],
-                        distance=activity['distance_meters'] / 1000,  # km
-                        duration=int(activity['duration_seconds']),
-                        synced_at=datetime.utcnow()
-                    )
-                    db.session.add(sync_history)
-                    
-                    results.append({
-                        'filename': filename,
-                        'status': 'success',
-                        'message': f'Atividade enviada com sucesso! {activity["distance_meters"]/1000:.2f}km em {int(activity["duration_seconds"]/60)}min'
-                    })
-                    success_count += 1
+                    # Verifica se foi criada com sucesso
+                    if response:
+                        # Registra no histórico
+                        sync_history = SyncHistory(
+                            user_id=current_user.id,
+                            garmin_activity_id=f"upload_{filename}",
+                            nike_activity_id=response,
+                            activity_name=filename,
+                            activity_type=activity['type'],
+                            distance=activity['distance_meters'] / 1000,  # km
+                            duration=int(activity['duration_seconds']),
+                            synced_at=datetime.utcnow()
+                        )
+                        db.session.add(sync_history)
+                        
+                        results.append({
+                            'filename': filename,
+                            'status': 'success',
+                            'message': f'Atividade enviada com sucesso! {activity["distance_meters"]/1000:.2f}km em {int(activity["duration_seconds"]/60)}min'
+                        })
+                        success_count += 1
+                    else:
+                        results.append({
+                            'filename': filename,
+                            'status': 'error',
+                            'message': 'Nike API rejeitou a atividade. Verifique o token.'
+                        })
+                        error_count += 1
                 
             except Exception as e:
                 logger.error(f"Error processing {filename}: {e}")
