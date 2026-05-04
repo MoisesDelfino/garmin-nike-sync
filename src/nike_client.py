@@ -329,7 +329,8 @@ class NikeClient:
                 return activity_id
             else:
                 logger.error(f"Erro ao criar atividade: {response.status_code}")
-                logger.debug(f"Response: {response.text}")
+                logger.error(f"Nike response: {response.text[:500]}")
+                logger.error(f"Payload enviado: {nike_payload}")
                 return None
                 
         except Exception as e:
