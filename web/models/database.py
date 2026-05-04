@@ -106,9 +106,9 @@ class User(UserMixin, db.Model):
         email = cipher.decrypt(self.nike_email_enc.encode()).decode()
         password = cipher.decrypt(self.nike_password_enc.encode()).decode()
         return email, password
-    has_garmin = bool(self.garmin_email_enc and self.garmin_password_enc)
-        has_nike = bool(self.nike_email_enc and self.nike_password_enc)
-        return has_garmin and has_nikerafado)"""
+    
+    def set_nike_token(self, token):
+        """Armazena token Nike (criptografado)"""
         cipher = self._get_cipher()
         self.nike_token_enc = cipher.encrypt(token.encode()).decode()
     
@@ -122,9 +122,9 @@ class User(UserMixin, db.Model):
     
     def has_credentials(self):
         """Verifica se usuário tem credenciais configuradas"""
-        return bool(self.garmin_email_enc and 
-                   self.garmin_password_enc and 
-                   self.nike_token_enc)
+        has_garmin = bool(self.garmin_email_enc and self.garmin_password_enc)
+        has_nike = bool(self.nike_email_enc and self.nike_password_enc)
+        return has_garmin and has_nike
     
     def to_dict(self):
         """Converte usuário para dicionário (sem dados sensíveis)"""
