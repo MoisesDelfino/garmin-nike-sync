@@ -406,7 +406,8 @@ def create_app(config=None):
     @login_required
     def upload_page():
         """Página de upload manual de atividades"""
-        if not current_user.nike_configured():
+        # Verifica se tem token Nike configurado
+        if not current_user.nike_token_enc or current_user.nike_status != 'active':
             flash('Configure seu token Nike primeiro nas Credenciais', 'warning')
             return redirect(url_for('credentials'))
         
@@ -416,7 +417,8 @@ def create_app(config=None):
     @login_required
     def upload_process():
         """Processa arquivos de atividades enviados"""
-        if not current_user.nike_configured():
+        # Verifica se tem token Nike configurado
+        if not current_user.nike_token_enc or current_user.nike_status != 'active':
             return jsonify({'error': 'Token Nike não configurado'}), 400
         
         # Verifica se há arquivos
