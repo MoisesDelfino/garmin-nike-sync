@@ -374,9 +374,23 @@ def create_app(config=None):
         if not current_user.has_credentials():
             return jsonify({'error': 'Credenciais não configuradas'}), 400
         
+        # Verifica cooldown por usuário (previne spam de sincronização)
+        from web.rate_limiter import rate_limiter
+        can_sync, remaining = rate_limiter.check_user_cooldown(current_user.id)
+        
+        if not can_sync:
+            minutes = remaining // 60
+            seconds = remaining % 60
+            return jsonify({
+                'error': f'⏳ Por favor, aguarde {minutes}min {seconds}s antes de sincronizar novamente. Isso evita bloqueios do Garmin.'
+            }), 429
+        
         try:
             manager = SyncManager(app)
             result = manager.sync_user(current_user.id)
+            
+            # Marca que o usuário sincronizou (inicia cooldown)
+            rate_limiter.mark_user_sync(current_user.id)
             
             return jsonify({
                 'success': True,

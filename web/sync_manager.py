@@ -278,9 +278,9 @@ class SyncManager:
                         logger.info(f"Sincronizando usuário {idx}/{len(users)}: {user.email}")
                         results[user.id] = self.sync_user(user.id)
                         
-                        # Delay entre usuários (exceto o último)
+                        # Delay entre usuários (exceto o último) - AUMENTADO para evitar rate limit
                         if idx < len(users):
-                            delay = 5  # 5 segundos entre cada usuário
+                            delay = 30  # 30 segundos entre cada usuário (CONSERVADOR)
                             logger.info(f"⏳ Aguardando {delay}s antes do próximo usuário...")
                             time.sleep(delay)
                         

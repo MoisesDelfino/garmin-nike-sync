@@ -35,10 +35,14 @@ class GarminRateLimiter:
         self._last_request_time = None
         self._request_lock = threading.Lock()
         
-        # Configurações
-        self.min_interval_seconds = 10  # Mínimo de 10 segundos entre requisições
-        self.cooldown_after_429 = 300  # 5 minutos de cooldown após 429
+        # Configurações (ULTRA CONSERVADORAS para evitar bloqueios)
+        self.min_interval_seconds = 45  # Mínimo de 45 segundos entre requisições
+        self.cooldown_after_429 = 1800  # 30 minutos de cooldown após 429
         self.last_429_time = None
+        
+        # Cooldown por usuário (previne spam de sincronização manual)
+        self._user_last_sync = {}  # {user_id: timestamp}
+        self.per_user_cooldown = 300  # 5 minutos entre syncs do mesmo usuário
         
         # Estatísticas
         self.total_requests = 0
@@ -97,8 +101,31 @@ class GarminRateLimiter:
             
             logger.error(
                 f"❌ Garmin retornou 429 (Rate Limit) - "
-                f"Entrando em cooldown de {self.cooldown_after_429}s"
+                f"Entrando em cooldown de {self.cooldown_after_429}s ({self.cooldown_after_429//60} minutos)"
             )
+    
+    def check_user_cooldown(self, user_id):
+        """
+        Verifica se o usuário específico está em cooldown.
+        Retorna (pode_sincronizar, segundos_restantes)
+        """
+        with self._request_lock:
+            if user_id not in self._user_last_sync:
+                return True, 0
+            
+            elapsed = time.time() - self._user_last_sync[user_id]
+            
+            if elapsed < self.per_user_cooldown:
+                remaining = self.per_user_cooldown - elapsed
+                return False, int(remaining)
+            
+            return True, 0
+    
+    def mark_user_sync(self, user_id):
+        """Marca que o usuário acabou de sincronizar"""
+        with self._request_lock:
+            self._user_last_sync[user_id] = time.time()
+            logger.debug(f"User {user_id} marked for cooldown ({self.per_user_cooldown}s)")
     
     def get_stats(self):
         """Retorna estatísticas do rate limiter"""
