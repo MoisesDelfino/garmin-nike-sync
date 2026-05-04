@@ -316,13 +316,15 @@ def create_app(config=None):
     return app
 
 
-# Ponto de entrada
+# Cria instância do app para o gunicorn em produção
+app = create_app()
+
+
+# Ponto de entrada para desenvolvimento local
 if __name__ == '__main__':
     # Configurar logging
     logger.remove()
     logger.add(sys.stdout, level="INFO")
-    
-    app = create_app()
     
     # Modo desenvolvimento
     port = int(os.getenv('PORT', 5000))
