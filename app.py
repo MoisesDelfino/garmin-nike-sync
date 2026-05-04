@@ -19,7 +19,6 @@ from web.models.database import db, User, SyncHistory, SyncLog
 from web.sync_manager import SyncManager
 from web.scheduler import init_scheduler
 from web.nike_auth import nike_auth_bp
-from src.nike_client import NikeClient
 from flask_migrate import Migrate
 
 
@@ -202,10 +201,9 @@ def create_app(config=None):
     @app.route('/credentials', methods=['GET', 'POST'])
     @login_required
     def credentials():
-        """Configurar credenciais Garmin e Nike"""
+        """Configurar credenciais Garmin"""
         if request.method == 'POST':
             data = request.form
-            has_changes = False
             
             # Salva credenciais Garmin
             if data.get('garmin_email') and data.get('garmin_password'):
@@ -213,48 +211,19 @@ def create_app(config=None):
                     data['garmin_email'],
                     data['garmin_password']
                 )
-                has_changes = True
-                logger.info(f"Garmin credentials updated for user: {current_user.email}")
-            
-            # Salva credenciais Nike e autentica automaticamente
-            if data.get('nike_email') and data.get('nike_password'):
-                nike_email = data['nike_email'].strip()
-                nike_password = data['nike_password'].strip()
-                
-                # Tenta autenticar no Nike e obter token
-                logger.info(f"Attempting Nike authentication for user: {current_user.email}")
-                success, access_token, error_msg = NikeClient.authenticate(nike_email, nike_password)
-                
-                if success and access_token:
-                    # Salva credenciais e token
-                    current_user.set_nike_credentials(nike_email, nike_password)
-                    current_user.set_nike_token(access_token)
-                    has_changes = True
-                    logger.success(f"Nike authentication successful for user: {current_user.email}")
-                    flash('Credenciais Nike salvas e autenticadas com sucesso!', 'success')
-                else:
-                    # Autenticação falhou
-                    logger.error(f"Nike authentication failed for user {current_user.email}: {error_msg}")
-                    flash(f'Erro ao autenticar no Nike: {error_msg}', 'error')
-            
-            # Commit alterações se houver
-            if has_changes:
                 db.session.commit()
-                
-                # Verifica se agora tem todas as credenciais
-                if current_user.has_credentials():
-                    flash('Todas as credenciais configuradas! A sincronização automática está ativa.', 'success')
+                logger.info(f"Garmin credentials updated for user: {current_user.email}")
+                flash('Credenciais Garmin salvas com sucesso!', 'success')
+            else:
+                flash('Email e senha Garmin são obrigatórios', 'error')
             
             return redirect(url_for('credentials'))
         
         # GET - mostra formulário
         garmin_email, _ = current_user.get_garmin_credentials()
-        nike_email, _ = current_user.get_nike_credentials()
         
         return render_template('credentials.html',
                              garmin_email=garmin_email or '',
-                             nike_email=nike_email or '',
-                             has_nike=bool(current_user.nike_email_enc),
                              has_nike_token=bool(current_user.nike_token_enc))
     
     @app.route('/settings', methods=['GET', 'POST'])

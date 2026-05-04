@@ -13,8 +13,8 @@ nike_auth_bp = Blueprint('nike_auth', __name__)
 @nike_auth_bp.route('/nike/connect')
 @login_required
 def nike_connect():
-    """Página para conectar conta Nike"""
-    return render_template('nike_connect.html')
+    """Página para conectar conta Nike com OAuth automático"""
+    return render_template('nike_connect_auto.html')
 
 
 @nike_auth_bp.route('/nike/callback', methods=['POST'])
