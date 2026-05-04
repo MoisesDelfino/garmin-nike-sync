@@ -56,6 +56,60 @@ BEGIN
     ELSE
         RAISE NOTICE 'Coluna nike_password_enc já existe';
     END IF;
+    
+    -- Adiciona nike_status se não existir
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='users' AND column_name='nike_status'
+    ) THEN
+        ALTER TABLE users ADD COLUMN nike_status VARCHAR(20) DEFAULT 'pending';
+        RAISE NOTICE 'Coluna nike_status adicionada';
+    ELSE
+        RAISE NOTICE 'Coluna nike_status já existe';
+    END IF;
+    
+    -- Adiciona nike_status_message se não existir
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='users' AND column_name='nike_status_message'
+    ) THEN
+        ALTER TABLE users ADD COLUMN nike_status_message TEXT;
+        RAISE NOTICE 'Coluna nike_status_message adicionada';
+    ELSE
+        RAISE NOTICE 'Coluna nike_status_message já existe';
+    END IF;
+    
+    -- Adiciona nike_configured_at se não existir
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='users' AND column_name='nike_configured_at'
+    ) THEN
+        ALTER TABLE users ADD COLUMN nike_configured_at TIMESTAMP;
+        RAISE NOTICE 'Coluna nike_configured_at adicionada';
+    ELSE
+        RAISE NOTICE 'Coluna nike_configured_at já existe';
+    END IF;
+    
+    -- Adiciona is_admin se não existir
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='users' AND column_name='is_admin'
+    ) THEN
+        ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
+        RAISE NOTICE 'Coluna is_admin adicionada';
+    ELSE
+        RAISE NOTICE 'Coluna is_admin já existe';
+    END IF;
+END \$\$;
+"
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='users' AND column_name='nike_password_enc'
+    ) THEN
+        ALTER TABLE users ADD COLUMN nike_password_enc TEXT;
+        RAISE NOTICE 'Coluna nike_password_enc adicionada';
+    ELSE
+        RAISE NOTICE 'Coluna nike_password_enc já existe';
+    END IF;
 END \$\$;
 "
 

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar {{ user.name }} - Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary mb-3">
+                <i class="bi bi-arrow-left"></i> Voltar ao Painel
+            </a>
+            <h2><i class="bi bi-person-fill"></i> {{ user.name }}</h2>
+            <p class="text-muted">{{ user.email }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informações do Usuário -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Informações do Usuário</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th>ID:</th>
+                            <td>{{ user.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Nome:</th>
+                            <td>{{ user.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>{{ user.email }}</td>
+                        </tr>
+                        <tr>
+                            <th>Criado em:</th>
+                            <td>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status Nike:</th>
+                            <td>
+                                {% if user.nike_status == 'active' %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% elif user.nike_status == 'pending' %}
+                                    <span class="badge bg-warning">Pendente</span>
+                                {% elif user.nike_status == 'error' %}
+                                    <span class="badge bg-danger">Erro</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Não configurado</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if user.nike_configured_at %}
+                        <tr>
+                            <th>Configurado em:</th>
+                            <td>{{ user.nike_configured_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Última Sync:</th>
+                            <td>{{ user.last_sync.strftime('%d/%m/%Y %H:%M') if user.last_sync else 'Nunca' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total Sincronizado:</th>
+                            <td>{{ user.total_synced }} atividades</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Credenciais Nike -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0"><i class="bi bi-key-fill"></i> Credenciais Nike</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Use estas credenciais para obter o token:</strong>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email Nike:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="{{ nike_email or 'Não informado' }}" readonly>
+                            {% if nike_email %}
+                            <button class="btn btn-outline-secondary" onclick="copyToClipboard('{{ nike_email }}')">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Senha Nike:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="{{ nike_password or 'Não informado' }}" readonly>
+                            {% if nike_password %}
+                            <button class="btn btn-outline-secondary" onclick="copyToClipboard('{{ nike_password }}')">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if nike_email and nike_password %}
+                    <a href="https://www.nike.com/member/settings" target="_blank" class="btn btn-primary w-100 mb-2">
+                        <i class="bi bi-box-arrow-up-right"></i> Abrir Nike.com
+                    </a>
+
+                    <div class="alert alert-secondary">
+                        <small>
+                            <strong>Como obter o token:</strong><br>
+                            1. Faça login no Nike.com<br>
+                            2. Abra o Console (F12)<br>
+                            3. Digite: <code>localStorage.getItem('access_token')</code><br>
+                            4. Copie o token e cole abaixo
+                        </small>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        Usuário ainda não forneceu credenciais Nike.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inserir Token -->
+    {% if nike_email and nike_password %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle-fill"></i> Ativar Nike Run Club</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="action" value="set_token">
+                        
+                        <div class="mb-3">
+                            <label for="nikeToken" class="form-label fw-bold">Cole o Token Nike:</label>
+                            <textarea class="form-control" id="nikeToken" name="nike_token" rows="6" 
+                                      placeholder="Cole aqui o token obtido do Nike.com..."
+                                      style="font-family: monospace; font-size: 0.9rem;"
+                                      required></textarea>
+                            <small class="text-muted">O token deve ter mais de 50 caracteres</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100">
+                            <i class="bi bi-check-circle-fill"></i> Ativar Nike para este Usuário
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ou Marcar como Erro -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-x-circle-fill"></i> Marcar como Erro</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="action" value="set_error">
+                        
+                        <div class="mb-3">
+                            <label for="errorMessage" class="form-label fw-bold">Mensagem de Erro:</label>
+                            <textarea class="form-control" id="errorMessage" name="error_message" rows="3" 
+                                      placeholder="Ex: Credenciais inválidas. Por favor, verifique seu email e senha Nike."
+                                      required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="bi bi-x-circle-fill"></i> Marcar como Erro
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('✓ Copiado!');
+    });
+}
+</script>
+{% endblock %}

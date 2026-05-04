@@ -37,6 +37,13 @@
                                 <i class="bi bi-key"></i> Credenciais
                             </a>
                         </li>
+                        {% if current_user.is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link text-warning" href="{{ url_for('admin_panel') }}">
+                                <i class="bi bi-shield-lock-fill"></i> Admin
+                            </a>
+                        </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('settings') }}">
                                 <i class="bi bi-gear"></i> Configurações

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Admin - Garmin → Nike Sync{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-shield-lock-fill"></i> Painel Administrativo</h2>
+            <p class="text-muted">Gerenciar tokens Nike dos usuários</p>
+        </div>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h3>{{ pending_users|length }}</h3>
+                    <p class="mb-0"><i class="bi bi-clock-fill"></i> Pendentes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ active_users|length }}</h3>
+                    <p class="mb-0"><i class="bi bi-check-circle-fill"></i> Ativos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h3>{{ error_users|length }}</h3>
+                    <p class="mb-0"><i class="bi bi-x-circle-fill"></i> Com Erro</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ all_users|length }}</h3>
+                    <p class="mb-0"><i class="bi bi-people-fill"></i> Total</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Usuários Pendentes -->
+    {% if pending_users %}
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning text-white">
+            <h5 class="mb-0"><i class="bi bi-clock-fill"></i> Usuários Pendentes - AÇÃO NECESSÁRIA</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Criado em</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in pending_users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="bi bi-gear-fill"></i> Configurar Nike
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Usuários Ativos -->
+    {% if active_users %}
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-check-circle-fill"></i> Usuários Ativos</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Configurado em</th>
+                            <th>Última Sync</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in active_users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.nike_configured_at.strftime('%d/%m/%Y %H:%M') if user.nike_configured_at else '-' }}</td>
+                            <td>{{ user.last_sync.strftime('%d/%m/%Y %H:%M') if user.last_sync else 'Nunca' }}</td>
+                            <td>
+                                <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye-fill"></i> Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Usuários com Erro -->
+    {% if error_users %}
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="bi bi-x-circle-fill"></i> Usuários com Erro</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Mensagem</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in error_users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td><small class="text-danger">{{ user.nike_status_message }}</small></td>
+                            <td>
+                                <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" 
+                                   class="btn btn-sm btn-warning">
+                                    <i class="bi bi-arrow-repeat"></i> Reconfigurar
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

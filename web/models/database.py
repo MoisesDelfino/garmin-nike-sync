@@ -47,6 +47,14 @@ class User(UserMixin, db.Model):
     # Token Nike (criptografado) - obtido automaticamente via credenciais
     nike_token_enc = db.Column(db.Text)
     
+    # Status de configuração Nike (para admin gerenciar)
+    nike_status = db.Column(db.String(20), default='pending')  # pending/active/error
+    nike_status_message = db.Column(db.Text)  # Mensagem para o usuário
+    nike_configured_at = db.Column(db.DateTime)  # Quando admin configurou
+    
+    # Admin flag
+    is_admin = db.Column(db.Boolean, default=False)
+    
     # Configurações de sincronização
     sync_enabled = db.Column(db.Boolean, default=True)
     historical_days = db.Column(db.Integer, default=365)

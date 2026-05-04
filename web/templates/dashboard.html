@@ -17,6 +17,37 @@
     </div>
 </div>
 
+<!-- Notificação de Status Nike -->
+{% if user.nike_status == 'active' and user.nike_configured_at %}
+    {% set time_since_config = (now - user.nike_configured_at).total_seconds() %}
+    {% if time_since_config < 3600 %}  <!-- Mostra por 1 hora após ativação -->
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <h5 class="alert-heading"><i class="bi bi-check-circle-fill"></i> Nike Conectado!</h5>
+        <p class="mb-0">
+            Sua conta Nike foi configurada com sucesso! A sincronização automática está ativa.
+            Seus treinos do Garmin serão sincronizados automaticamente para o Nike Run Club.
+        </p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+{% elif user.nike_status == 'pending' %}
+<div class="alert alert-warning" role="alert">
+    <h6 class="alert-heading"><i class="bi bi-clock-fill"></i> Nike em Configuração</h6>
+    <p class="mb-0">
+        {{ user.nike_status_message or 'Recebemos suas credenciais Nike! Nossa equipe está configurando sua conta. Você será notificado quando estiver pronto.' }}
+    </p>
+</div>
+{% elif user.nike_status == 'error' %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Erro na Configuração Nike</h6>
+    <p class="mb-2">{{ user.nike_status_message }}</p>
+    <a href="{{ url_for('credentials') }}" class="btn btn-sm btn-danger">
+        Atualizar Credenciais
+    </a>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
 <!-- Status Cards -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">

@@ -196,14 +196,16 @@ def create_app(config=None):
         return render_template('dashboard.html',
                              user=current_user,
                              recent_syncs=recent_syncs,
-                             recent_logs=recent_logs)
+                             recent_logs=recent_logs,
+                             now=datetime.utcnow())
     
     @app.route('/credentials', methods=['GET', 'POST'])
     @login_required
     def credentials():
-        """Configurar credenciais Garmin"""
+        """Configurar credenciais Garmin e Nike"""
         if request.method == 'POST':
             data = request.form
+            has_changes = False
             
             # Salva credenciais Garmin
             if data.get('garmin_email') and data.get('garmin_password'):
@@ -211,20 +213,46 @@ def create_app(config=None):
                     data['garmin_email'],
                     data['garmin_password']
                 )
-                db.session.commit()
+                has_changes = True
                 logger.info(f"Garmin credentials updated for user: {current_user.email}")
                 flash('Credenciais Garmin salvas com sucesso!', 'success')
-            else:
-                flash('Email e senha Garmin são obrigatórios', 'error')
+            
+            # Salva credenciais Nike (admin vai configurar manualmente)
+            if data.get('nike_email') and data.get('nike_password'):
+                current_user.set_nike_credentials(
+                    data['nike_email'],
+                    data['nike_password']
+                )
+                current_user.nike_status = 'pending'
+                current_user.nike_status_message = 'Suas credenciais foram recebidas! Nossa equipe está configurando sua conta Nike. Você será notificado em breve.'
+                has_changes = True
+                
+                # Log para admin ver
+                logger.warning(f"⚠️ ADMIN ACTION REQUIRED - Nike credentials pending for user: {current_user.email} (ID: {current_user.id})")
+                logger.info(f"Nike email: {data['nike_email']}")
+                
+                flash('Credenciais Nike recebidas! Configuraremos sua conta em até 24 horas.', 'info')
+            
+            if has_changes:
+                db.session.commit()
             
             return redirect(url_for('credentials'))
         
         # GET - mostra formulário
         garmin_email, _ = current_user.get_garmin_credentials()
+        nike_email, _ = current_user.get_nike_credentials()
+        
+        # Formata data de configuração
+        nike_configured_at = None
+        if current_user.nike_configured_at:
+            nike_configured_at = current_user.nike_configured_at.strftime('%d/%m/%Y %H:%M')
         
         return render_template('credentials.html',
                              garmin_email=garmin_email or '',
-                             has_nike_token=bool(current_user.nike_token_enc))
+                             nike_email=nike_email or '',
+                             nike_status=current_user.nike_status or 'none',
+                             nike_status_message=current_user.nike_status_message,
+                             nike_configured_at=nike_configured_at)
     
     @app.route('/settings', methods=['GET', 'POST'])
     @login_required
@@ -335,6 +363,93 @@ def create_app(config=None):
             'last_sync': current_user.last_sync.isoformat() if current_user.last_sync else None,
             'has_nike_token': bool(current_user.nike_token_enc)
         })
+    
+    # ============= ADMIN ROUTES =============
+    
+    def admin_required(f):
+        """Decorator para rotas que requerem admin"""
+        from functools import wraps
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated or not current_user.is_admin:
+                flash('Acesso negado. Apenas administradores.', 'error')
+                return redirect(url_for('index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    
+    @app.route('/admin')
+    @login_required
+    @admin_required
+    def admin_panel():
+        """Painel administrativo - lista usuários pendentes"""
+        # Usuários com Nike pendente
+        pending_users = User.query.filter_by(nike_status='pending').all()
+        
+        # Usuários ativos
+        active_users = User.query.filter_by(nike_status='active').all()
+        
+        # Usuários com erro
+        error_users = User.query.filter_by(nike_status='error').all()
+        
+        # Todos os usuários
+        all_users = User.query.order_by(User.created_at.desc()).all()
+        
+        return render_template('admin/panel.html',
+                             pending_users=pending_users,
+                             active_users=active_users,
+                             error_users=error_users,
+                             all_users=all_users)
+    
+    @app.route('/admin/user/<int:user_id>', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_user_detail(user_id):
+        """Detalhes do usuário e inserir token Nike"""
+        user = User.query.get_or_404(user_id)
+        
+        if request.method == 'POST':
+            action = request.form.get('action')
+            
+            if action == 'set_token':
+                token = request.form.get('nike_token', '').strip()
+                
+                if len(token) < 50:
+                    flash('Token muito curto. Verifique se copiou corretamente.', 'error')
+                else:
+                    # Remove aspas se houver
+                    token = token.replace('"', '').replace("'", "")
+                    
+                    # Salva token
+                    user.set_nike_token(token)
+                    user.nike_status = 'active'
+                    user.nike_status_message = '✅ Nike conectado com sucesso! Sincronização automática ativa.'
+                    user.nike_configured_at = datetime.utcnow()
+                    db.session.commit()
+                    
+                    logger.success(f"Admin activated Nike for user: {user.email}")
+                    flash(f'Token Nike ativado para {user.email}!', 'success')
+                    
+                    return redirect(url_for('admin_panel'))
+            
+            elif action == 'set_error':
+                error_msg = request.form.get('error_message', '').strip()
+                
+                user.nike_status = 'error'
+                user.nike_status_message = error_msg or 'Erro ao configurar Nike. Verifique suas credenciais.'
+                db.session.commit()
+                
+                logger.warning(f"Admin set error for user: {user.email}")
+                flash(f'Status de erro definido para {user.email}', 'warning')
+                
+                return redirect(url_for('admin_panel'))
+        
+        # GET - mostra detalhes
+        nike_email, nike_password = user.get_nike_credentials()
+        
+        return render_template('admin/user_detail.html',
+                             user=user,
+                             nike_email=nike_email,
+                             nike_password=nike_password)
     
     # Tratamento de erros
     @app.errorhandler(404)
