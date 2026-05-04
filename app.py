@@ -448,47 +448,110 @@ def create_app(config=None):
                 # Lê conteúdo do arquivo
                 file_content = file.read()
                 
-                # Parse do arquivo
-                logger.info(f"Parsing file: {filename}")
-                activity = ActivityParser.parse_file(file_content, filename)
-                
-                # Valida atividade
-                if not validate_activity(activity):
-                    raise ValueError("Atividade com dados inválidos")
-                
-                # Converte para formato Nike
-                nike_activity = {
-                    'type': activity['type'],
-                    'start_time': activity['start_time'].isoformat(),
-                    'duration_seconds': activity['duration_seconds'],
-                    'distance_meters': activity['distance_meters'],
-                    'calories': activity.get('calories'),
-                    'avg_heart_rate': activity.get('avg_heart_rate')
-                }
-                
-                # Envia para Nike
-                logger.info(f"Uploading {filename} to Nike...")
-                response = nike_client.upload_activity(**nike_activity)
-                
-                # Registra no histórico
-                sync_history = SyncHistory(
-                    user_id=current_user.id,
-                    garmin_activity_id=f"upload_{filename}",
-                    nike_activity_id=response.get('id', 'unknown'),
-                    activity_name=filename,
-                    activity_type=activity['type'],
-                    distance=activity['distance_meters'] / 1000,  # km
-                    duration=int(activity['duration_seconds']),
-                    synced_at=datetime.utcnow()
-                )
-                db.session.add(sync_history)
-                
-                results.append({
-                    'filename': filename,
-                    'status': 'success',
-                    'message': f'Atividade enviada com sucesso! {activity["distance_meters"]/1000:.2f}km em {int(activity["duration_seconds"]/60)}min'
-                })
-                success_count += 1
+                # CSV é tratado diferentemente (contém múltiplas atividades)
+                if filename.lower().endswith('.csv'):
+                    logger.info(f"Processing CSV file: {filename}")
+                    activities = ActivityParser.parse_csv_file(file_content)
+                    
+                    csv_success = 0
+                    csv_errors = 0
+                    
+                    for activity in activities:
+                        try:
+                            # Valida atividade
+                            if not validate_activity(activity):
+                                csv_errors += 1
+                                continue
+                            
+                            # Converte para formato Nike
+                            nike_activity = {
+                                'type': activity['type'],
+                                'start_time': activity['start_time'].isoformat(),
+                                'duration_seconds': activity['duration_seconds'],
+                                'distance_meters': activity['distance_meters'],
+                                'calories': activity.get('calories'),
+                                'avg_heart_rate': activity.get('avg_heart_rate')
+                            }
+                            
+                            # Envia para Nike
+                            response = nike_client.upload_activity(**nike_activity)
+                            
+                            # Registra no histórico
+                            sync_history = SyncHistory(
+                                user_id=current_user.id,
+                                garmin_activity_id=f"csv_{activity['start_time'].strftime('%Y%m%d_%H%M%S')}",
+                                nike_activity_id=response.get('id', 'unknown'),
+                                activity_name=activity.get('activity_name', 'CSV Import'),
+                                activity_type=activity['type'],
+                                distance=activity['distance_meters'] / 1000,
+                                duration=int(activity['duration_seconds']),
+                                synced_at=datetime.utcnow()
+                            )
+                            db.session.add(sync_history)
+                            csv_success += 1
+                            
+                        except Exception as e:
+                            logger.error(f"Error uploading activity from CSV: {e}")
+                            csv_errors += 1
+                    
+                    # Resultado do CSV
+                    if csv_success > 0:
+                        results.append({
+                            'filename': filename,
+                            'status': 'success' if csv_errors == 0 else 'partial',
+                            'message': f'{csv_success} atividades sincronizadas com sucesso' + (f', {csv_errors} com erro' if csv_errors > 0 else '')
+                        })
+                        success_count += 1
+                    else:
+                        results.append({
+                            'filename': filename,
+                            'status': 'error',
+                            'message': f'Nenhuma atividade foi sincronizada ({csv_errors} erros)'
+                        })
+                        error_count += 1
+                    
+                else:
+                    # Arquivos individuais (.FIT, .TCX, .GPX)
+                    logger.info(f"Parsing file: {filename}")
+                    activity = ActivityParser.parse_file(file_content, filename)
+                    
+                    # Valida atividade
+                    if not validate_activity(activity):
+                        raise ValueError("Atividade com dados inválidos")
+                    
+                    # Converte para formato Nike
+                    nike_activity = {
+                        'type': activity['type'],
+                        'start_time': activity['start_time'].isoformat(),
+                        'duration_seconds': activity['duration_seconds'],
+                        'distance_meters': activity['distance_meters'],
+                        'calories': activity.get('calories'),
+                        'avg_heart_rate': activity.get('avg_heart_rate')
+                    }
+                    
+                    # Envia para Nike
+                    logger.info(f"Uploading {filename} to Nike...")
+                    response = nike_client.upload_activity(**nike_activity)
+                    
+                    # Registra no histórico
+                    sync_history = SyncHistory(
+                        user_id=current_user.id,
+                        garmin_activity_id=f"upload_{filename}",
+                        nike_activity_id=response.get('id', 'unknown'),
+                        activity_name=filename,
+                        activity_type=activity['type'],
+                        distance=activity['distance_meters'] / 1000,  # km
+                        duration=int(activity['duration_seconds']),
+                        synced_at=datetime.utcnow()
+                    )
+                    db.session.add(sync_history)
+                    
+                    results.append({
+                        'filename': filename,
+                        'status': 'success',
+                        'message': f'Atividade enviada com sucesso! {activity["distance_meters"]/1000:.2f}km em {int(activity["duration_seconds"]/60)}min'
+                    })
+                    success_count += 1
                 
             except Exception as e:
                 logger.error(f"Error processing {filename}: {e}")

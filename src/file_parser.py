@@ -1,8 +1,9 @@
 """
-Parser de arquivos de atividades do Garmin (.fit, .tcx, .gpx)
+Parser de arquivos de atividades do Garmin (.fit, .tcx, .gpx, .csv)
 Converte arquivos exportados manualmente do Garmin Connect para formato estruturado
 """
 import io
+import csv
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 import logging
@@ -64,6 +65,9 @@ class ActivityParser:
             return ActivityParser._parse_gpx(file_content)
         elif filename_lower.endswith('.tcx'):
             return ActivityParser._parse_tcx(file_content)
+        elif filename_lower.endswith('.csv'):
+            # CSV retorna lista de atividades, não apenas uma
+            raise ValueError("Use parse_csv_file() para arquivos CSV")
         else:
             raise ValueError(f"Formato de arquivo não suportado: {filename}")
     
@@ -269,6 +273,152 @@ class ActivityParser:
             raise ValueError("Arquivo TCX não contém timestamp de início")
         
         return activity_data
+    
+    @staticmethod
+    def parse_csv_file(file_content: bytes) -> List[Dict]:
+        """
+        Parse arquivo CSV exportado do Garmin Connect
+        Retorna lista de atividades (diferente dos outros parsers que retornam uma única atividade)
+        
+        Args:
+            file_content: Conteúdo do arquivo CSV em bytes
+            
+        Returns:
+            Lista de dicts com dados das atividades
+        """
+        # Decodifica bytes para string
+        try:
+            csv_text = file_content.decode('utf-8')
+        except UnicodeDecodeError:
+            # Tenta com encoding alternativo
+            csv_text = file_content.decode('latin-1')
+        
+        # Parse CSV
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+        activities = []
+        
+        for row in csv_reader:
+            try:
+                # Extrai dados da linha
+                # Colunas típicas: Data, Tipo de atividade, Distância, Tempo, etc
+                
+                # Data (formato pode variar)
+                date_str = row.get('Data') or row.get('Date') or row.get('data')
+                if not date_str:
+                    logger.warning(f"Linha sem data, pulando: {row}")
+                    continue
+                
+                # Parse data - tenta vários formatos
+                start_time = None
+                date_formats = [
+                    '%Y-%m-%d %H:%M:%S',
+                    '%d-%m-%Y %H:%M:%S',
+                    '%Y/%m/%d %H:%M:%S',
+                    '%d/%m/%Y %H:%M:%S',
+                    '%Y-%m-%d',
+                    '%d-%m-%Y'
+                ]
+                
+                for fmt in date_formats:
+                    try:
+                        start_time = datetime.strptime(date_str, fmt)
+                        break
+                    except ValueError:
+                        continue
+                
+                if not start_time:
+                    logger.warning(f"Não foi possível fazer parse da data: {date_str}")
+                    continue
+                
+                # Tipo de atividade
+                activity_type_str = (row.get('Tipo de atividade') or 
+                                    row.get('Activity Type') or 
+                                    row.get('Tipo') or 
+                                    'Corrida').lower()
+                
+                if 'corrida' in activity_type_str or 'running' in activity_type_str:
+                    activity_type = 'run'
+                elif 'ciclismo' in activity_type_str or 'cycling' in activity_type_str or 'bike' in activity_type_str:
+                    activity_type = 'cycle'
+                elif 'caminhada' in activity_type_str or 'walking' in activity_type_str:
+                    activity_type = 'walk'
+                else:
+                    activity_type = 'run'  # Default
+                
+                # Distância (em km, converte para metros)
+                distance_str = row.get('Distância') or row.get('Distance') or '0'
+                distance_str = distance_str.replace(',', '.').replace(' ', '').replace('km', '')
+                try:
+                    distance_km = float(distance_str)
+                    distance_meters = distance_km * 1000
+                except ValueError:
+                    logger.warning(f"Distância inválida: {distance_str}")
+                    distance_meters = 0
+                
+                # Tempo/Duração
+                time_str = row.get('Tempo') or row.get('Time') or row.get('Duração') or '00:00:00'
+                
+                # Parse tempo HH:MM:SS ou MM:SS
+                duration_seconds = 0
+                time_parts = time_str.split(':')
+                try:
+                    if len(time_parts) == 3:  # HH:MM:SS
+                        duration_seconds = int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + int(time_parts[2])
+                    elif len(time_parts) == 2:  # MM:SS
+                        duration_seconds = int(time_parts[0]) * 60 + int(time_parts[1])
+                except (ValueError, IndexError):
+                    logger.warning(f"Tempo inválido: {time_str}")
+                    duration_seconds = 0
+                
+                # Calorias
+                calories_str = row.get('Calorias') or row.get('Calories') or row.get('Calor') or '0'
+                calories_str = calories_str.replace(',', '').replace('.', '').replace(' ', '')
+                try:
+                    calories = int(float(calories_str))
+                except ValueError:
+                    calories = None
+                
+                # Frequência cardíaca média
+                hr_str = row.get('FC Média') or row.get('Avg HR') or row.get('FC média') or '0'
+                hr_str = hr_str.replace(',', '').replace('.', '').replace(' ', '').replace('bpm', '')
+                try:
+                    avg_hr = int(float(hr_str))
+                    if avg_hr <= 0:
+                        avg_hr = None
+                except ValueError:
+                    avg_hr = None
+                
+                # Pula atividades inválidas
+                if distance_meters <= 0 or duration_seconds <= 0:
+                    logger.warning(f"Atividade inválida (distância ou tempo zero): {row}")
+                    continue
+                
+                # Nome da atividade
+                activity_name = row.get('Título') or row.get('Title') or row.get('Nome') or f"{activity_type_str} {date_str}"
+                
+                activity = {
+                    'type': activity_type,
+                    'start_time': start_time,
+                    'duration_seconds': duration_seconds,
+                    'distance_meters': distance_meters,
+                    'calories': calories,
+                    'avg_heart_rate': avg_hr,
+                    'gps_data': [],  # CSV não tem GPS
+                    'activity_name': activity_name
+                }
+                
+                activities.append(activity)
+                
+            except Exception as e:
+                logger.error(f"Erro ao processar linha do CSV: {e}")
+                logger.error(f"Linha: {row}")
+                continue
+        
+        if not activities:
+            raise ValueError("Nenhuma atividade válida encontrada no CSV")
+        
+        logger.info(f"✓ Extraídas {len(activities)} atividades do CSV")
+        return activities
 
 
 def validate_activity(activity: Dict) -> bool:

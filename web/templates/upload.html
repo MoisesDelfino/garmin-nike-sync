@@ -19,15 +19,24 @@
 <!-- Informações -->
 <div class="alert alert-info" role="alert">
     <h5 class="alert-heading"><i class="bi bi-info-circle-fill"></i> Como funciona?</h5>
-    <ol class="mb-0">
-        <li>Exporte suas atividades do <strong>Garmin Connect</strong> (formatos .FIT, .TCX ou .GPX)</li>
-        <li>Faça upload dos arquivos aqui</li>
-        <li>Clique em "Enviar para Nike Run Club"</li>
-        <li>Pronto! Suas atividades serão sincronizadas sem usar a API do Garmin</li>
+    
+    <strong>📁 Opção 1: Arquivos individuais (.FIT, .TCX, .GPX)</strong>
+    <ol class="mb-2">
+        <li>Acesse uma atividade no Garmin Connect</li>
+        <li>Clique em ⚙️ → "Exportar Original" (gera .FIT com GPS completo)</li>
+        <li>Faça upload aqui</li>
     </ol>
+    
+    <strong>📊 Opção 2: CSV em massa (sincroniza muitas atividades de uma vez)</strong>
+    <ol class="mb-0">
+        <li>Na lista de atividades do Garmin, clique em "Exportar CSV"</li>
+        <li>Faça upload do arquivo .CSV aqui</li>
+        <li>Todas as atividades serão sincronizadas automaticamente (sem GPS/mapa)</li>
+    </ol>
+    
     <hr>
     <small class="text-muted">
-        <strong>💡 Dica:</strong> Para exportar do Garmin Connect, acesse uma atividade → ⚙️ (Configurações) → "Exportar Original" ou "Exportar para TCX/GPX"
+        <strong>💡 Dica:</strong> Use CSV para sincronizar dezenas de atividades rapidamente! Atividades individuais (.FIT) têm GPS completo.
     </small>
 </div>
 
@@ -45,10 +54,10 @@
                 <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
                 <p class="mt-3 mb-2 h5">Arraste arquivos aqui ou clique para selecionar</p>
                 <p class="text-muted mb-0">
-                    Formatos aceitos: <strong>.FIT</strong>, <strong>.TCX</strong>, <strong>.GPX</strong>
+                    Formatos aceitos: <strong>.FIT</strong>, <strong>.TCX</strong>, <strong>.GPX</strong>, <strong>.CSV</strong>
                 </p>
                 <input type="file" id="fileInput" name="files" multiple 
-                       accept=".fit,.FIT,.tcx,.TCX,.gpx,.GPX" 
+                       accept=".fit,.FIT,.tcx,.TCX,.gpx,.GPX,.csv,.CSV" 
                        style="display: none;">
             </div>
             
