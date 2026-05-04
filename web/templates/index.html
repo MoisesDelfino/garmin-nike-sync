@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row align-items-center min-vh-75">
-    <div class="col-lg-6">
+<div class="row align-items-center justify-content-center min-vh-75">
+    <div class="col-lg-6 text-center">
         <h1 class="display-4 fw-bold mb-4">
             <i class="bi bi-arrow-left-right text-primary"></i><br>
             Garmin → Nike Sync
         </h1>
-        <p class="lead text-muted mb-4">
+        <p class="lead text-muted mb-5">
             Sincronize automaticamente suas atividades do <strong>Garmin Connect</strong> 
             para o <strong>Nike Run Club</strong>.
         </p>
         
-        <div class="d-flex gap-3 mb-5">
+        <div class="d-flex gap-3 justify-content-center">
             <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
                 <i class="bi bi-person-plus"></i> Criar Conta
             </a>
@@ -20,94 +20,15 @@
                 <i class="bi bi-box-arrow-in-right"></i> Entrar
             </a>
         </div>
-
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
-                    <div>
-                        <h6 class="mb-1">Automático</h6>
-                        <small class="text-muted">Sincronização a cada 15 minutos</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
-                    <div>
-                        <h6 class="mb-1">Seguro</h6>
-                        <small class="text-muted">Credenciais criptografadas</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
-                    <div>
-                        <h6 class="mb-1">Anti-Duplicação</h6>
-                        <small class="text-muted">Detecta atividades duplicadas</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
-                    <div>
-                        <h6 class="mb-1">Gratuito</h6>
-                        <small class="text-muted">100% grátis para usar</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="card shadow-lg border-0">
-            <div class="card-body p-5">
-                <h3 class="card-title mb-4 text-center">Como Funciona</h3>
-                
-                <div class="d-flex align-items-start mb-4">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                         style="width: 40px; height: 40px; min-width: 40px;">
-                        <strong>1</strong>
-                    </div>
-                    <div class="ms-3">
-                        <h6 class="mb-1">Crie sua conta</h6>
-                        <p class="text-muted mb-0 small">Cadastre-se gratuitamente</p>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-start mb-4">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                         style="width: 40px; height: 40px; min-width: 40px;">
-                        <strong>2</strong>
-                    </div>
-                    <div class="ms-3">
-                        <h6 class="mb-1">Configure credenciais</h6>
-                        <p class="text-muted mb-0 small">Informe seus dados do Garmin e Nike</p>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-start mb-4">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                         style="width: 40px; height: 40px; min-width: 40px;">
-                        <strong>3</strong>
-                    </div>
-                    <div class="ms-3">
-                        <h6 class="mb-1">Pronto!</h6>
-                        <p class="text-muted mb-0 small">Suas corridas serão sincronizadas automaticamente</p>
-                    </div>
-                </div>
-
-                <div class="text-center mt-4">
-                    <a href="{{ url_for('register') }}" class="btn btn-primary w-100">
-                        Começar Agora <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
+
+<style>
+.min-vh-75 {
+    min-height: 75vh;
+}
+</style>
+{% endblock %}
 
 <style>
 .min-vh-75 {

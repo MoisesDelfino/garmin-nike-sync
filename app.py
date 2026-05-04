@@ -321,8 +321,9 @@ def create_app(config=None):
     
     @app.route('/settings', methods=['GET', 'POST'])
     @login_required
+    @admin_required
     def settings():
-        """Configurações de sincronização"""
+        """Configurações de sincronização (somente admin)"""
         if request.method == 'POST':
             data = request.form
             
