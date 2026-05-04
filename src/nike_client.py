@@ -416,6 +416,8 @@ class NikeClient:
             'type': nike_type,
             'start_epoch_ms': start_epoch_ms,
             'end_epoch_ms': end_epoch_ms,
+            'app_id': 'garmin_sync',
+            'metric_type': 'distance',
             'summaries': [
                 {
                     'metric': 'distance',
