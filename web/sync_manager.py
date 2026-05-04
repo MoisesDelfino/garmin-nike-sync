@@ -3,6 +3,7 @@ Sync Manager para aplicação Web
 Gerencia sincronização de atividades para usuários web
 """
 
+import time
 from datetime import datetime, timedelta
 from loguru import logger
 
@@ -10,6 +11,7 @@ from web.models.database import db, User, SyncHistory, SyncLog
 from src.garmin_client import GarminClient
 from src.nike_client import NikeClient
 from src.synchronizer import Synchronizer
+from web.rate_limiter import rate_limiter
 
 
 class SyncManager:
@@ -234,6 +236,7 @@ class SyncManager:
     def sync_all_users(self):
         """
         Sincroniza todos os usuários ativos
+        Com rate limiting e delays entre usuários
         
         Returns:
             Dicionário com resultados por usuário
@@ -246,14 +249,39 @@ class SyncManager:
             
             logger.info(f"Starting sync for {len(users)} users")
             
+            # Verifica se está em cooldown
+            if rate_limiter:
+                stats = rate_limiter.get_stats()
+                if stats['in_cooldown']:
+                    remaining = stats['cooldown_remaining_seconds']
+                    logger.warning(
+                        f"⏳ Garmin em cooldown - pulando sincronização de {len(users)} usuários "
+                        f"(restam {int(remaining)}s)"
+                    )
+                    return {'status': 'cooldown', 'remaining_seconds': remaining}
+            
             results = {}
-            for user in users:
+            for idx, user in enumerate(users, 1):
                 if user.has_credentials():
                     try:
+                        logger.info(f"Sincronizando usuário {idx}/{len(users)}: {user.email}")
                         results[user.id] = self.sync_user(user.id)
+                        
+                        # Delay entre usuários (exceto o último)
+                        if idx < len(users):
+                            delay = 5  # 5 segundos entre cada usuário
+                            logger.info(f"⏳ Aguardando {delay}s antes do próximo usuário...")
+                            time.sleep(delay)
+                        
                     except Exception as e:
-                        logger.error(f"Error syncing user {user.id}: {e}")
-                        results[user.id] = {'status': 'error', 'message': str(e)}
+                        error_msg = str(e)
+                        logger.error(f"Error syncing user {user.id}: {error_msg}")
+                        results[user.id] = {'status': 'error', 'message': error_msg}
+                        
+                        # Se foi rate limit, para a sincronização
+                        if "RATE_LIMIT" in error_msg:
+                            logger.warning("⚠️ Rate limit detectado - parando sincronização de outros usuários")
+                            break
                 else:
                     logger.warning(f"User {user.email} has no credentials")
                     results[user.id] = {'status': 'no_credentials'}

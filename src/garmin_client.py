@@ -11,6 +11,13 @@ from loguru import logger
 import garth
 from requests.exceptions import HTTPError
 
+# Rate limiter global para controlar requisições ao Garmin
+try:
+    from web.rate_limiter import rate_limiter
+except ImportError:
+    # Fallback se não estiver em ambiente web
+    rate_limiter = None
+
 
 class GarminClient:
     """Cliente para interagir com Garmin Connect API"""
@@ -42,6 +49,11 @@ class GarminClient:
             Exception: Com mensagem específica do erro
         """
         logger.info(f"Autenticando no Garmin Connect com email: {self.email}")
+        
+        # Rate limiting global
+        if rate_limiter:
+            if not rate_limiter.wait_if_needed():
+                raise Exception("RATE_LIMIT: Garmin em cooldown após muitas requisições. Aguarde alguns minutos.")
         
         # Tenta carregar sessão salva
         session_dir = ".garth"
@@ -85,6 +97,9 @@ class GarminClient:
                 # Detecta erro 429 (Rate Limit)
                 if "429" in error_str or "Too Many Requests" in error_str:
                     logger.error(f"❌ Garmin Rate Limit (429) - Tentativa {attempt}/{max_retries}")
+                    # Registra erro 429 no rate limiter global
+                    if rate_limiter:
+                        rate_limiter.report_429_error()
                     if attempt == max_retries:
                         raise Exception("RATE_LIMIT: O Garmin está temporariamente bloqueando requisições devido a muitas tentativas. Aguarde 15-30 minutos antes de tentar novamente.")
                     continue
@@ -117,6 +132,12 @@ class GarminClient:
         """
         if not self._authenticated:
             if not self.authenticate():
+                return []
+        
+        # Rate limiting global antes de buscar atividades
+        if rate_limiter:
+            if not rate_limiter.wait_if_needed():
+                logger.warning("Garmin em cooldown - pulando busca de atividades")
                 return []
         
         try:

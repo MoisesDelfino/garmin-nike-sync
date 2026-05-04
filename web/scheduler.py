@@ -45,8 +45,8 @@ def init_scheduler(app):
         logger.warning("Scheduler already initialized")
         return
     
-    # Intervalo de sincronização (padrão: 15 minutos)
-    sync_interval = int(app.config.get('SYNC_INTERVAL_MINUTES', 15))
+    # Intervalo de sincronização (padrão: 30 minutos para evitar rate limit)
+    sync_interval = int(app.config.get('SYNC_INTERVAL_MINUTES', 30))
     
     logger.info(f"Initializing scheduler with {sync_interval} minutes interval")
     
