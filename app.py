@@ -23,14 +23,26 @@ from web.scheduler import init_scheduler
 def create_app(config=None):
     """Factory para criar aplicação Flask"""
     
+    logger.info("=== Starting Flask app creation ===")
+    
     app = Flask(__name__, 
                 template_folder='web/templates',
                 static_folder='web/static')
     
+    logger.info("Flask app instance created")
+    
     # Configuração
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///garmin_nike_sync.db')
+    
+    # Fix DATABASE_URL para compatibilidade com SQLAlchemy 2.0+
+    database_url = os.getenv('DATABASE_URL', 'sqlite:///garmin_nike_sync.db')
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    logger.info(f"Database URL configured: {database_url[:20]}...")
     
     # Custom config
     if config:
@@ -38,6 +50,7 @@ def create_app(config=None):
     
     # Inicializa extensões
     db.init_app(app)
+    logger.info("SQLAlchemy initialized")
     
     # Flask-Login
     login_manager = LoginManager()
@@ -49,14 +62,23 @@ def create_app(config=None):
     def load_user(user_id):
         return User.query.get(int(user_id))
     
-    # Cria tabelas
-    with app.app_context():
-        db.create_all()
-        logger.info("Database initialized")
+    # Cria tabelas (com tratamento de erro)
+    try:
+        with app.app_context():
+            db.create_all()
+            logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing database: {e}")
+        # Não falhar completamente, deixa app iniciar
     
     # Inicializa scheduler (sincronização automática)
     if not app.config.get('TESTING'):
-        init_scheduler(app)
+        try:
+            init_scheduler(app)
+            logger.info("Scheduler initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing scheduler: {e}")
+            # Não falhar completamente, deixa app iniciar
     
     # ========== ROTAS ==========
     
@@ -313,11 +335,20 @@ def create_app(config=None):
     def server_error(error):
         return render_template('500.html'), 500
     
+    logger.info("=== Flask app created successfully ===")
     return app
 
 
 # Cria instância do app para o gunicorn em produção
-app = create_app()
+try:
+    logger.info("Creating app instance for gunicorn...")
+    app = create_app()
+    logger.info("App instance created successfully for gunicorn")
+except Exception as e:
+    logger.error(f"FATAL: Failed to create app instance: {e}")
+    logger.exception("Full traceback:")
+    import sys
+    sys.exit(1)
 
 
 # Ponto de entrada para desenvolvimento local
