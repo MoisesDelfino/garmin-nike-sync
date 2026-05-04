@@ -92,7 +92,10 @@ class SyncManager:
                 
                 logger.info("Testando conexão Nike...")
                 if not nike.test_connection():
-                    raise Exception("Falha na conexão Nike. Token pode estar inválido ou expirado. Entre em contato com o administrador.")
+                    user.nike_status = 'error'
+                    user.nike_status_message = "Token Nike inválido ou expirado. Entre em contato com o administrador para renovar o token."
+                    db.session.commit()
+                    raise Exception("Token Nike inválido ou expirado. Por favor, entre em contato com o administrador para que ele renove seu token Nike.")
                 
                 logger.info("Autenticações OK, iniciando sincronização...")
                 

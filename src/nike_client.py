@@ -185,19 +185,48 @@ class NikeClient:
             logger.info("Testando conexão com Nike Run Club...")
             response = self.session.get(
                 f"{self.ACTIVITIES_URL}",
-                params={'limit': 1}
+                params={'limit': 1},
+                timeout=15
             )
             
+            # Verifica Content-Type
+            content_type = response.headers.get('Content-Type', '')
+            
+            if 'html' in content_type.lower():
+                logger.error("❌ Nike retornou HTML em vez de JSON - Token inválido ou expirado")
+                logger.error(f"Status: {response.status_code}")
+                logger.error("O token Nike precisa ser renovado pelo administrador")
+                return False
+            
+            if response.status_code == 401:
+                logger.error("❌ Token Nike não autorizado (401) - Token inválido ou expirado")
+                return False
+            
+            if response.status_code == 403:
+                logger.error("❌ Acesso negado pela Nike (403) - Token pode estar bloqueado")
+                return False
+            
             if response.status_code == 200:
-                logger.success("Conectado ao Nike Run Club com sucesso")
-                return True
+                try:
+                    # Tenta parsear JSON para garantir que é válido
+                    data = response.json()
+                    logger.success("✓ Conectado ao Nike Run Club com sucesso")
+                    return True
+                except ValueError as e:
+                    logger.error(f"❌ Nike retornou resposta inválida: {e}")
+                    logger.error(f"Content-Type: {content_type}")
+                    logger.error("Token Nike pode estar corrompido ou expirado")
+                    return False
             else:
-                logger.error(f"Falha na conexão: Status {response.status_code}")
-                logger.debug(f"Response: {response.text}")
+                logger.error(f"❌ Falha na conexão: Status {response.status_code}")
+                logger.debug(f"Response: {response.text[:200]}")
                 return False
                 
+        except requests.exceptions.Timeout:
+            logger.error("❌ Timeout ao conectar com Nike API")
+            return False
         except Exception as e:
-            logger.error(f"Erro ao conectar com Nike: {e}")
+            logger.error(f"❌ Erro ao conectar com Nike: {type(e).__name__}: {e}")
             return False
     
     def get_activities(self, start_date: Optional[datetime] = None,
@@ -220,13 +249,34 @@ class NikeClient:
                 'offset': 0
             }
             
-            response = self.session.get(self.ACTIVITIES_URL, params=params)
+            response = self.session.get(self.ACTIVITIES_URL, params=params, timeout=15)
+            
+            # Verifica Content-Type
+            content_type = response.headers.get('Content-Type', '')
+            
+            if 'html' in content_type.lower():
+                logger.error("Nike retornou HTML - Token inválido ou expirado")
+                raise Exception("Token Nike inválido. A API retornou HTML em vez de JSON. Token precisa ser renovado.")
+            
+            if response.status_code == 401:
+                logger.error("Token Nike não autorizado (401)")
+                raise Exception("Token Nike expirou ou é inválido. Entre em contato com o administrador.")
+            
+            if response.status_code == 403:
+                logger.error("Acesso negado pela Nike (403)")
+                raise Exception("Token Nike bloqueado. Entre em contato com o administrador.")
             
             if response.status_code != 200:
                 logger.error(f"Erro ao buscar atividades Nike: {response.status_code}")
-                return []
+                raise Exception(f"Erro ao buscar atividades Nike: Status {response.status_code}")
             
-            data = response.json()
+            try:
+                data = response.json()
+            except ValueError as e:
+                logger.error(f"Resposta não é JSON válido: {e}")
+                logger.error(f"Content-Type: {content_type}")
+                raise Exception("Nike retornou resposta inválida. Token pode estar corrompido.")
+            
             activities = data.get('activities', [])
             
             # Parse atividades
