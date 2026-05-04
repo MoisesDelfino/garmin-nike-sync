@@ -13,8 +13,8 @@ nike_auth_bp = Blueprint('nike_auth', __name__)
 @nike_auth_bp.route('/nike/connect')
 @login_required
 def nike_connect():
-    """Página para conectar conta Nike - mobile only (simplificado)"""
-    return render_template('nike_connect_mobile.html')
+    """Página para conectar conta Nike - método manual (funciona sempre)"""
+    return render_template('nike_connect_manual.html')
 
 
 @nike_auth_bp.route('/nike/callback', methods=['POST'])
