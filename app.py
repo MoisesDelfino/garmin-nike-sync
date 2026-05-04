@@ -199,20 +199,15 @@ def create_app(config=None):
                     data['garmin_email'],
                     data['garmin_password']
                 )
+                
+                db.session.commit()
+                
+                logger.info(f"Garmin credentials updated for user: {current_user.email}")
+                flash('Credenciais Garmin salvas com sucesso!', 'success')
+            else:
+                flash('Email e senha Garmin são obrigatórios', 'error')
             
-            # Salva token Nike (se fornecido ou se ainda não tem)
-            nike_token = data.get('nike_token', '').strip()
-            if nike_token and nike_token != '••••••••':
-                current_user.set_nike_token(nike_token)
-            elif not nike_token and not current_user.nike_token_enc:
-                flash('Token Nike é obrigatório', 'error')
-                return redirect(url_for('credentials'))
-            
-            db.session.commit()
-            
-            logger.info(f"Credentials updated for user: {current_user.email}")
-            flash('Credenciais salvas com sucesso!', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('credentials'))
         
         # GET - mostra formulário
         garmin_email, _ = current_user.get_garmin_credentials()
