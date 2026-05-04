@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Logs e Processos - Garmin → Nike Sync{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-journal-text"></i> Logs e Processos</h2>
+            <p class="text-muted">Monitoramento de sincronizações e atividades de todos os usuários</p>
+        </div>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ total_users }}</h3>
+                    <p class="mb-0"><i class="bi bi-people-fill"></i> Total de Usuários</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ active_users }}</h3>
+                    <p class="mb-0"><i class="bi bi-check-circle-fill"></i> Usuários Ativos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3>{{ total_synced }}</h3>
+                    <p class="mb-0"><i class="bi bi-arrow-repeat"></i> Atividades Sincronizadas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('admin_logs') }}" class="row g-3">
+                <div class="col-md-4">
+                    <label for="user_id" class="form-label">Filtrar por Usuário</label>
+                    <select class="form-select" id="user_id" name="user_id">
+                        <option value="">Todos os usuários</option>
+                        {% for user in all_users %}
+                        <option value="{{ user.id }}" {% if current_filter_user == user.id %}selected{% endif %}>
+                            {{ user.name }} ({{ user.email }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Filtrar por Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">Todos os status</option>
+                        <option value="success" {% if current_filter_status == 'success' %}selected{% endif %}>Sucesso</option>
+                        <option value="error" {% if current_filter_status == 'error' %}selected{% endif %}>Erro</option>
+                        <option value="running" {% if current_filter_status == 'running' %}selected{% endif %}>Em execução</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="limit" class="form-label">Limite de Resultados</label>
+                    <select class="form-select" id="limit" name="limit">
+                        <option value="25">25 registros</option>
+                        <option value="50" selected>50 registros</option>
+                        <option value="100">100 registros</option>
+                        <option value="200">200 registros</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Abas -->
+    <ul class="nav nav-tabs mb-3" id="logsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="executions-tab" data-bs-toggle="tab" data-bs-target="#executions" type="button" role="tab">
+                <i class="bi bi-clock-history"></i> Execuções ({{ sync_logs|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="activities-tab" data-bs-toggle="tab" data-bs-target="#activities" type="button" role="tab">
+                <i class="bi bi-list-check"></i> Atividades ({{ sync_history|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="errors-tab" data-bs-toggle="tab" data-bs-target="#errors" type="button" role="tab">
+                <i class="bi bi-exclamation-triangle"></i> Erros ({{ recent_errors|length }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="logsTabsContent">
+        <!-- Aba: Execuções -->
+        <div class="tab-pane fade show active" id="executions" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Logs de Execução</h5>
+                </div>
+                <div class="card-body">
+                    {% if sync_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Início</th>
+                                    <th>Fim</th>
+                                    <th>Duração</th>
+                                    <th>Status</th>
+                                    <th>Encontradas</th>
+                                    <th>Sincronizadas</th>
+                                    <th>Duplicadas</th>
+                                    <th>Erros</th>
+                                    <th>Mensagem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log, user in sync_logs %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ user.name }}</strong><br>
+                                        <small class="text-muted">{{ user.email }}</small>
+                                    </td>
+                                    <td>{{ log.started_at.strftime('%d/%m/%Y %H:%M:%S') if log.started_at else '-' }}</td>
+                                    <td>{{ log.finished_at.strftime('%d/%m/%Y %H:%M:%S') if log.finished_at else '-' }}</td>
+                                    <td>
+                                        {% if log.started_at and log.finished_at %}
+                                        {% set duration = (log.finished_at - log.started_at).total_seconds() %}
+                                        {{ '%.1f'|format(duration) }}s
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.status == 'success' %}
+                                        <span class="badge bg-success">Sucesso</span>
+                                        {% elif log.status == 'error' %}
+                                        <span class="badge bg-danger">Erro</span>
+                                        {% elif log.status == 'running' %}
+                                        <span class="badge bg-primary">Em execução</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ log.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.total_found or 0 }}</td>
+                                    <td><strong>{{ log.total_synced or 0 }}</strong></td>
+                                    <td>{{ log.total_duplicates or 0 }}</td>
+                                    <td>{{ log.total_errors or 0 }}</td>
+                                    <td>
+                                        {% if log.message %}
+                                        <small>{{ log.message[:100] }}{% if log.message|length > 100 %}...{% endif %}</small>
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">Nenhum log de execução encontrado.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba: Atividades Sincronizadas -->
+        <div class="tab-pane fade" id="activities" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-list-check"></i> Histórico de Atividades Sincronizadas</h5>
+                </div>
+                <div class="card-body">
+                    {% if sync_history %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Atividade</th>
+                                    <th>Tipo</th>
+                                    <th>Data da Atividade</th>
+                                    <th>Distância</th>
+                                    <th>Duração</th>
+                                    <th>Sincronizado em</th>
+                                    <th>Status</th>
+                                    <th>IDs</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for history, user in sync_history %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ user.name }}</strong><br>
+                                        <small class="text-muted">{{ user.email }}</small>
+                                    </td>
+                                    <td>{{ history.activity_name or 'Sem nome' }}</td>
+                                    <td>
+                                        {% if history.activity_type %}
+                                        <span class="badge bg-info">{{ history.activity_type }}</span>
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ history.activity_date.strftime('%d/%m/%Y %H:%M') if history.activity_date else '-' }}</td>
+                                    <td>
+                                        {% if history.distance %}
+                                        {{ '%.2f'|format(history.distance / 1000) }} km
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if history.duration %}
+                                        {% set hours = (history.duration // 3600) %}
+                                        {% set minutes = ((history.duration % 3600) // 60) %}
+                                        {% set seconds = (history.duration % 60) %}
+                                        {% if hours > 0 %}{{ hours }}h {% endif %}{{ minutes }}m {{ seconds }}s
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ history.synced_at.strftime('%d/%m/%Y %H:%M') if history.synced_at else '-' }}</td>
+                                    <td>
+                                        {% if history.sync_status == 'synced' %}
+                                        <span class="badge bg-success">Sincronizado</span>
+                                        {% elif history.sync_status == 'duplicate' %}
+                                        <span class="badge bg-warning">Duplicado</span>
+                                        {% elif history.sync_status == 'error' %}
+                                        <span class="badge bg-danger">Erro</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ history.sync_status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <strong>Garmin:</strong> {{ history.garmin_activity_id }}<br>
+                                            <strong>Nike:</strong> {{ history.nike_activity_id or '-' }}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">Nenhuma atividade sincronizada encontrada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba: Erros Recentes -->
+        <div class="tab-pane fade" id="errors" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Erros Recentes (últimos 10)</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_errors %}
+                    <div class="list-group">
+                        {% for log, user in recent_errors %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    <i class="bi bi-person-fill"></i> {{ user.name }}
+                                    <small class="text-muted">({{ user.email }})</small>
+                                </h6>
+                                <small class="text-danger">{{ log.started_at.strftime('%d/%m/%Y %H:%M:%S') if log.started_at else '-' }}</small>
+                            </div>
+                            <p class="mb-1">
+                                <strong>Mensagem:</strong> {{ log.message or 'Erro sem mensagem' }}
+                            </p>
+                            <small class="text-muted">
+                                Encontradas: {{ log.total_found or 0 }} |
+                                Sincronizadas: {{ log.total_synced or 0 }} |
+                                Erros: {{ log.total_errors or 0 }}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        Nenhum erro recente! Tudo funcionando perfeitamente.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão para atualizar -->
+    <div class="row mt-4">
+        <div class="col text-center">
+            <a href="{{ url_for('admin_logs') }}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i> Atualizar Logs
+            </a>
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-arrow-left"></i> Voltar para Painel Admin
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
+{% endblock %}

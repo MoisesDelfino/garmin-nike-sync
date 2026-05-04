@@ -346,13 +346,11 @@ def create_app(config=None):
             end_date_str = data.get('initial_sync_end_date', '').strip()
             
             if start_date_str:
-                from datetime import datetime
                 current_user.initial_sync_start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
             else:
                 current_user.initial_sync_start_date = None
             
             if end_date_str:
-                from datetime import datetime
                 current_user.initial_sync_end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
             else:
                 current_user.initial_sync_end_date = None
@@ -534,6 +532,67 @@ def create_app(config=None):
                              user=user,
                              nike_email=nike_email,
                              nike_password=nike_password)
+    
+    @app.route('/admin/logs')
+    @login_required
+    @admin_required
+    def admin_logs():
+        """Logs e histórico de sincronizações de todos os usuários"""
+        # Parâmetros de filtro
+        user_filter = request.args.get('user_id', type=int)
+        status_filter = request.args.get('status')
+        limit = request.args.get('limit', default=50, type=int)
+        
+        # Buscar logs de sincronização (últimas execuções)
+        sync_logs_query = db.session.query(SyncLog, User)\
+            .join(User, SyncLog.user_id == User.id)\
+            .order_by(SyncLog.started_at.desc())
+        
+        if user_filter:
+            sync_logs_query = sync_logs_query.filter(SyncLog.user_id == user_filter)
+        
+        if status_filter:
+            sync_logs_query = sync_logs_query.filter(SyncLog.status == status_filter)
+        
+        sync_logs = sync_logs_query.limit(limit).all()
+        
+        # Buscar histórico de atividades sincronizadas
+        sync_history_query = db.session.query(SyncHistory, User)\
+            .join(User, SyncHistory.user_id == User.id)\
+            .order_by(SyncHistory.synced_at.desc())
+        
+        if user_filter:
+            sync_history_query = sync_history_query.filter(SyncHistory.user_id == user_filter)
+        
+        sync_history = sync_history_query.limit(limit).all()
+        
+        # Estatísticas gerais
+        from sqlalchemy import func
+        total_users = User.query.count()
+        active_users = User.query.filter_by(nike_status='active', sync_enabled=True).count()
+        total_synced = db.session.query(func.sum(User.total_synced)).scalar() or 0
+        
+        # Últimos erros
+        recent_errors = db.session.query(SyncLog, User)\
+            .join(User, SyncLog.user_id == User.id)\
+            .filter(SyncLog.status == 'error')\
+            .order_by(SyncLog.started_at.desc())\
+            .limit(10)\
+            .all()
+        
+        # Lista de usuários para filtro
+        all_users = User.query.order_by(User.name).all()
+        
+        return render_template('admin/logs.html',
+                             sync_logs=sync_logs,
+                             sync_history=sync_history,
+                             recent_errors=recent_errors,
+                             total_users=total_users,
+                             active_users=active_users,
+                             total_synced=total_synced,
+                             all_users=all_users,
+                             current_filter_user=user_filter,
+                             current_filter_status=status_filter)
     
     # Tratamento de erros
     @app.errorhandler(404)
