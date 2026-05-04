@@ -34,20 +34,23 @@ class GarminClient:
             True se autenticado com sucesso
         """
         try:
-            logger.info("Autenticando no Garmin Connect...")
+            logger.info(f"Autenticando no Garmin Connect com email: {self.email}")
             
             # Tenta carregar sessão salva
             session_dir = ".garth"
             if os.path.exists(session_dir):
                 try:
                     garth.resume(session_dir)
-                    logger.info("Sessão Garmin restaurada do cache")
+                    # Testa se a sessão ainda é válida
+                    garth.connectapi("/userprofile-service/userprofile")
+                    logger.info("Sessão Garmin restaurada do cache e válida")
                     self._authenticated = True
                     return True
                 except Exception as e:
-                    logger.warning(f"Não foi possível restaurar sessão: {e}")
+                    logger.warning(f"Sessão expirada ou inválida, fazendo novo login: {e}")
             
             # Nova autenticação
+            logger.info("Fazendo login no Garmin Connect...")
             garth.login(self.email, self.password)
             garth.save(session_dir)
             
@@ -56,7 +59,9 @@ class GarminClient:
             return True
             
         except Exception as e:
-            logger.error(f"Erro ao autenticar no Garmin: {e}")
+            logger.error(f"Erro ao autenticar no Garmin: {type(e).__name__}: {e}")
+            logger.error(f"Email tentado: {self.email}")
+            logger.error("Verifique se o email e senha estão corretos")
             self._authenticated = False
             return False
     

@@ -64,16 +64,37 @@ class SyncManager:
                 garmin_email, garmin_password = user.get_garmin_credentials()
                 nike_token = user.get_nike_token()
                 
+                logger.info(f"Garmin email: {garmin_email[:3]}***{garmin_email[-10:] if len(garmin_email) > 13 else ''}")
+                logger.info(f"Nike token exists: {bool(nike_token)}")
+                logger.info(f"Nike status: {user.nike_status}")
+                
+                # Verifica se credenciais existem
+                if not garmin_email or not garmin_password:
+                    raise Exception("Credenciais Garmin não configuradas")
+                
+                if not nike_token:
+                    raise Exception("Token Nike não configurado. Aguarde configuração do administrador.")
+                
+                if user.nike_status != 'active':
+                    raise Exception(f"Nike status: {user.nike_status}. Aguarde ativação pelo administrador.")
+                
                 # Inicializa clientes
+                logger.info("Inicializando cliente Garmin...")
                 garmin = GarminClient(garmin_email, garmin_password)
+                
+                logger.info("Inicializando cliente Nike...")
                 nike = NikeClient(nike_token)
                 
                 # Testa conexões
+                logger.info("Testando autenticação Garmin...")
                 if not garmin.authenticate():
-                    raise Exception("Falha na autenticação Garmin")
+                    raise Exception("Falha na autenticação Garmin. Verifique suas credenciais na página de Configurações.")
                 
+                logger.info("Testando conexão Nike...")
                 if not nike.test_connection():
-                    raise Exception("Falha na conexão Nike")
+                    raise Exception("Falha na conexão Nike. Token pode estar inválido ou expirado. Entre em contato com o administrador.")
+                
+                logger.info("Autenticações OK, iniciando sincronização...")
                 
                 # Cria sincronizador
                 sync = Synchronizer(
