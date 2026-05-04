@@ -261,10 +261,18 @@
 // Sincronização manual
 document.getElementById('btnManualSync')?.addEventListener('click', async function() {
     const btn = this;
-    const modal = new bootstrap.Modal(document.getElementById('syncModal'));
+    const modalElement = document.getElementById('syncModal');
+    const modal = new bootstrap.Modal(modalElement);
     
     btn.disabled = true;
     modal.show();
+    
+    // Timeout de segurança: fecha a modal após 2 minutos se não receber resposta
+    const safetyTimeout = setTimeout(() => {
+        modal.hide();
+        alert('⏱️ Tempo limite excedido. A sincronização pode estar demorando mais que o esperado. Verifique os logs.');
+        btn.disabled = false;
+    }, 120000); // 2 minutos
     
     try {
         const response = await fetch('/sync/manual', {
@@ -274,11 +282,14 @@ document.getElementById('btnManualSync')?.addEventListener('click', async functi
             }
         });
         
+        clearTimeout(safetyTimeout);
+        
         const data = await response.json();
         
+        // Fecha a modal SEMPRE, independente do resultado
         modal.hide();
         
-        if (data.success) {
+        if (response.ok && data.success) {
             alert(`✅ Sincronização concluída!\n\n` +
                   `Total: ${data.stats.total}\n` +
                   `Sincronizadas: ${data.stats.synced}\n` +
@@ -286,13 +297,23 @@ document.getElementById('btnManualSync')?.addEventListener('click', async functi
                   `Erros: ${data.stats.errors}`);
             location.reload();
         } else {
-            alert('❌ Erro: ' + data.error);
+            alert('❌ Erro: ' + (data.error || 'Erro desconhecido'));
         }
     } catch (error) {
+        clearTimeout(safetyTimeout);
+        // Garante que a modal seja fechada em qualquer erro
         modal.hide();
         alert('❌ Erro na sincronização: ' + error.message);
     } finally {
+        // Garante que o botão seja reativado
         btn.disabled = false;
+        
+        // Última garantia: fecha a modal se ainda estiver aberta
+        setTimeout(() => {
+            if (modalElement.classList.contains('show')) {
+                modal.hide();
+            }
+        }, 100);
     }
 });
 </script>
