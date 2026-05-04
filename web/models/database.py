@@ -40,7 +40,11 @@ class User(UserMixin, db.Model):
     garmin_email_enc = db.Column(db.Text)
     garmin_password_enc = db.Column(db.Text)
     
-    # Token Nike (criptografado)
+    # Credenciais Nike (criptografadas)
+    nike_email_enc = db.Column(db.Text)
+    nike_password_enc = db.Column(db.Text)
+    
+    # Token Nike (criptografado) - obtido automaticamente via credenciais
     nike_token_enc = db.Column(db.Text)
     
     # Configurações de sincronização
@@ -87,8 +91,24 @@ class User(UserMixin, db.Model):
         password = cipher.decrypt(self.garmin_password_enc.encode()).decode()
         return email, password
     
-    def set_nike_token(self, token):
-        """Armazena token Nike (criptografado)"""
+    def set_nike_credentials(self, email, password):
+        """Armazena credenciais Nike (criptografadas)"""
+        cipher = self._get_cipher()
+        self.nike_email_enc = cipher.encrypt(email.encode()).decode()
+        self.nike_password_enc = cipher.encrypt(password.encode()).decode()
+    
+    def get_nike_credentials(self):
+        """Recupera credenciais Nike (descriptografadas)"""
+        if not self.nike_email_enc or not self.nike_password_enc:
+            return None, None
+        
+        cipher = self._get_cipher()
+        email = cipher.decrypt(self.nike_email_enc.encode()).decode()
+        password = cipher.decrypt(self.nike_password_enc.encode()).decode()
+        return email, password
+    has_garmin = bool(self.garmin_email_enc and self.garmin_password_enc)
+        has_nike = bool(self.nike_email_enc and self.nike_password_enc)
+        return has_garmin and has_nikerafado)"""
         cipher = self._get_cipher()
         self.nike_token_enc = cipher.encrypt(token.encode()).decode()
     

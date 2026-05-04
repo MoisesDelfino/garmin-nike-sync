@@ -5,9 +5,10 @@ Cliente não-oficial para Nike Run Club API (reverse engineered)
 
 import requests
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from loguru import logger
 import json
+import base64
 
 
 class NikeClient:
@@ -15,6 +16,7 @@ class NikeClient:
     
     # Endpoints da Nike API (reverse engineered)
     BASE_URL = "https://api.nike.com"
+    AUTH_URL = "https://unite.nike.com"
     ACTIVITIES_URL = f"{BASE_URL}/sport/v3/me/activities"
     ACTIVITY_URL = f"{BASE_URL}/sport/v3/me/activity"
     
@@ -33,6 +35,91 @@ class NikeClient:
             'User-Agent': 'Nike/5.44.0 (iPhone; iOS 15.0; Scale/3.00)',
             'Accept': 'application/json',
         })
+    
+    @staticmethod
+    def authenticate(email: str, password: str) -> Tuple[bool, Optional[str], Optional[str]]:
+        """
+        Autentica no Nike.com e obtém access token automaticamente
+        
+        Args:
+            email: Email da conta Nike
+            password: Senha da conta Nike
+            
+        Returns:
+            Tupla (sucesso, access_token, mensagem_erro)
+        """
+        try:
+            logger.info(f"Autenticando no Nike com email: {email}")
+            
+            session = requests.Session()
+            
+            # Headers para imitar app mobile Nike
+            headers = {
+                'User-Agent': 'Nike/5.44.0 (iPhone; iOS 15.0; Scale/3.00)',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Accept-Language': 'pt-BR,pt;q=0.9',
+            }
+            
+            # Endpoint de autenticação Nike Unite
+            auth_endpoint = f"{NikeClient.AUTH_URL}/loginWithSetCookie"
+            
+            # Payload de autenticação
+            payload = {
+                'username': email,
+                'password': password,
+                'client_id': 'HlHa2Cje3ctlaOqnxvgZXNaAs7T9nAuH',  # Client ID do app Nike
+                'ux_id': 'com.nike.commerce.nikedotcom.web',
+                'grant_type': 'password',
+                'keepMeLoggedIn': True
+            }
+            
+            # Faz requisição de login
+            response = session.post(
+                auth_endpoint,
+                json=payload,
+                headers=headers,
+                timeout=30
+            )
+            
+            # Verifica resposta
+            if response.status_code == 200:
+                data = response.json()
+                access_token = data.get('access_token')
+                
+                if access_token:
+                    logger.success("Autenticação Nike bem-sucedida!")
+                    return True, access_token, None
+                else:
+                    logger.error("Token não encontrado na resposta")
+                    return False, None, "Token não encontrado na resposta de autenticação"
+            
+            elif response.status_code == 401:
+                logger.error("Credenciais Nike inválidas")
+                return False, None, "Email ou senha incorretos"
+            
+            elif response.status_code == 400:
+                error_data = response.json()
+                error_msg = error_data.get('error_description', 'Erro de validação')
+                logger.error(f"Erro de validação: {error_msg}")
+                return False, None, error_msg
+            
+            else:
+                logger.error(f"Erro na autenticação Nike: Status {response.status_code}")
+                logger.debug(f"Response: {response.text[:500]}")
+                return False, None, f"Erro ao autenticar (Status {response.status_code})"
+        
+        except requests.exceptions.Timeout:
+            logger.error("Timeout ao tentar autenticar no Nike")
+            return False, None, "Timeout na conexão com Nike.com"
+        
+        except requests.exceptions.ConnectionError:
+            logger.error("Erro de conexão ao tentar autenticar no Nike")
+            return False, None, "Erro de conexão com Nike.com"
+        
+        except Exception as e:
+            logger.error(f"Erro inesperado na autenticação Nike: {e}")
+            return False, None, f"Erro inesperado: {str(e)}"
         
     def test_connection(self) -> bool:
         """
