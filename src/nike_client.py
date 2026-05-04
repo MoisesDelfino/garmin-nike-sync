@@ -319,7 +319,7 @@ class NikeClient:
             nike_payload = self._format_for_nike(activity_data)
             
             response = self.session.post(
-                f"{self.ACTIVITY_URL}",
+                f"{self.ACTIVITIES_URL}",
                 json=nike_payload
             )
             
@@ -436,10 +436,8 @@ class NikeClient:
                 }
             ],
             'tags': {
-                'com.nike.name': garmin_activity.get('name', 'Corrida'),
-                'com.nike.source': 'garmin_sync'
-            },
-            'moments': []
+                'com.nike.name': garmin_activity.get('name', 'Corrida')
+            }
         }
         
         # Adiciona métricas extras se disponíveis
