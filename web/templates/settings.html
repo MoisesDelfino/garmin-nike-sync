@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações - Garmin → Nike Sync{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-gear"></i> Configurações
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form method="POST" action="{{ url_for('settings') }}">
+            <!-- Sincronização Automática -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-repeat"></i> Sincronização Automática
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" 
+                               id="sync_enabled" name="sync_enabled" 
+                               {% if current_user.sync_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="sync_enabled">
+                            <strong>Ativar sincronização automática</strong>
+                        </label>
+                        <div class="form-text">
+                            Quando ativado, suas atividades serão sincronizadas automaticamente a cada 15 minutos.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="historical_days" class="form-label">
+                            Dias de Histórico (primeira sincronização)
+                        </label>
+                        <input type="number" class="form-control" id="historical_days" 
+                               name="historical_days" value="{{ current_user.historical_days }}" 
+                               min="1" max="730">
+                        <div class="form-text">
+                            Quantos dias de histórico sincronizar na primeira vez (padrão: 365)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detecção de Duplicatas -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-shield-check"></i> Detecção de Duplicatas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Configurações para evitar sincronizar atividades duplicadas que já existem no Nike Run Club.
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="time_tolerance" class="form-label">
+                            Tolerância de Tempo (segundos)
+                        </label>
+                        <input type="number" class="form-control" id="time_tolerance" 
+                               name="time_tolerance" value="{{ current_user.time_tolerance }}" 
+                               min="0" max="3600">
+                        <div class="form-text">
+                            Diferença máxima de tempo para considerar duplicata (padrão: 300s = 5min)
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="distance_tolerance" class="form-label">
+                            Tolerância de Distância (metros)
+                        </label>
+                        <input type="number" class="form-control" id="distance_tolerance" 
+                               name="distance_tolerance" value="{{ current_user.distance_tolerance }}" 
+                               min="0" max="1000">
+                        <div class="form-text">
+                            Diferença máxima de distância para considerar duplicata (padrão: 50m)
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Como funciona:</strong> Uma atividade é considerada duplicata se já existe 
+                        uma atividade no Nike com data/hora dentro da tolerância de tempo E distância 
+                        dentro da tolerância de distância.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informações da Conta -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-circle"></i> Informações da Conta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Nome</label>
+                            <p class="mb-0">{{ current_user.name }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Email</label>
+                            <p class="mb-0">{{ current_user.email }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Membro desde</label>
+                            <p class="mb-0">{{ current_user.created_at.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Total Sincronizado</label>
+                            <p class="mb-0">{{ current_user.total_synced }} atividades</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Salvar Configurações
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Status -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Status Atual
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2">
+                    <i class="bi bi-{{ 'check-circle-fill text-success' if current_user.sync_enabled else 'pause-circle text-secondary' }}"></i>
+                    <strong>Sincronização:</strong> 
+                    {{ 'Ativa' if current_user.sync_enabled else 'Pausada' }}
+                </p>
+
+                <p class="small mb-2">
+                    <i class="bi bi-{{ 'check-circle-fill text-success' if current_user.has_credentials() else 'exclamation-triangle text-warning' }}"></i>
+                    <strong>Credenciais:</strong> 
+                    {{ 'Configuradas' if current_user.has_credentials() else 'Pendentes' }}
+                </p>
+
+                <p class="small mb-2">
+                    <i class="bi bi-clock-history"></i>
+                    <strong>Última sincronização:</strong><br>
+                    <span class="text-muted">
+                        {% if current_user.last_sync %}
+                            {{ current_user.last_sync.strftime('%d/%m/%Y às %H:%M') }}
+                        {% else %}
+                            Nunca
+                        {% endif %}
+                    </span>
+                </p>
+
+                {% if current_user.last_sync_status == 'error' %}
+                <div class="alert alert-danger small mb-0 mt-3">
+                    <strong>Último erro:</strong><br>
+                    {{ current_user.last_sync_message }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Dicas -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-lightbulb"></i> Dicas
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2">
+                    <i class="bi bi-lightning-fill text-warning"></i>
+                    <strong>Primeiro Uso</strong>
+                </p>
+                <p class="small text-muted mb-3">
+                    Na primeira sincronização, recomendamos 365 dias de histórico.
+                </p>
+
+                <p class="small mb-2">
+                    <i class="bi bi-shield-check text-success"></i>
+                    <strong>Anti-Duplicação</strong>
+                </p>
+                <p class="small text-muted mb-0">
+                    As configurações padrão (300s, 50m) funcionam bem para a maioria dos casos.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

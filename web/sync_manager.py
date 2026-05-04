@@ -1,0 +1,207 @@
+"""
+Sync Manager para aplicação Web
+Gerencia sincronização de atividades para usuários web
+"""
+
+from datetime import datetime, timedelta
+from loguru import logger
+
+from web.models.database import db, User, SyncHistory, SyncLog
+from src.garmin_client import GarminClient
+from src.nike_client import NikeClient
+from src.synchronizer import Synchronizer
+
+
+class SyncManager:
+    """Gerenciador de sincronização para aplicação web"""
+    
+    def __init__(self, app):
+        """
+        Inicializa gerenciador
+        
+        Args:
+            app: Instância Flask app
+        """
+        self.app = app
+    
+    def sync_user(self, user_id):
+        """
+        Sincroniza atividades de um usuário específico
+        
+        Args:
+            user_id: ID do usuário
+            
+        Returns:
+            Dicionário com estatísticas
+        """
+        with self.app.app_context():
+            user = User.query.get(user_id)
+            
+            if not user:
+                logger.error(f"User {user_id} not found")
+                return None
+            
+            if not user.sync_enabled:
+                logger.info(f"Sync disabled for user {user.email}")
+                return {'status': 'disabled'}
+            
+            if not user.has_credentials():
+                logger.warning(f"User {user.email} has no credentials")
+                return {'status': 'no_credentials'}
+            
+            # Cria log de execução
+            sync_log = SyncLog(
+                user_id=user.id,
+                status='running'
+            )
+            db.session.add(sync_log)
+            db.session.commit()
+            
+            try:
+                logger.info(f"Starting sync for user: {user.email}")
+                
+                # Obtém credenciais
+                garmin_email, garmin_password = user.get_garmin_credentials()
+                nike_token = user.get_nike_token()
+                
+                # Inicializa clientes
+                garmin = GarminClient(garmin_email, garmin_password)
+                nike = NikeClient(nike_token)
+                
+                # Testa conexões
+                if not garmin.authenticate():
+                    raise Exception("Falha na autenticação Garmin")
+                
+                if not nike.test_connection():
+                    raise Exception("Falha na conexão Nike")
+                
+                # Cria sincronizador
+                sync = Synchronizer(
+                    garmin,
+                    nike,
+                    time_tolerance=user.time_tolerance,
+                    distance_tolerance=user.distance_tolerance
+                )
+                
+                # Determina se é primeira sincronização
+                is_first_sync = user.last_sync is None
+                
+                if is_first_sync:
+                    logger.info(f"First sync for {user.email} - syncing history")
+                    stats = sync.sync_historical(days=user.historical_days)
+                else:
+                    logger.info(f"Syncing new activities for {user.email}")
+                    stats = sync.sync_new_activities()
+                
+                # Salva atividades sincronizadas no banco
+                self._save_sync_history(user, stats, sync)
+                
+                # Atualiza usuário
+                user.last_sync = datetime.utcnow()
+                user.last_sync_status = 'success'
+                user.last_sync_message = f"{stats['synced']} atividades sincronizadas"
+                user.total_synced += stats['synced']
+                
+                # Atualiza log
+                sync_log.finished_at = datetime.utcnow()
+                sync_log.status = 'success'
+                sync_log.total_found = stats['total']
+                sync_log.total_synced = stats['synced']
+                sync_log.total_duplicates = stats['skipped_duplicate']
+                sync_log.total_errors = stats['errors']
+                sync_log.message = f"Sincronizadas {stats['synced']} de {stats['total']} atividades"
+                
+                db.session.commit()
+                
+                logger.success(f"Sync completed for {user.email}: {stats}")
+                
+                return stats
+                
+            except Exception as e:
+                logger.error(f"Sync error for user {user.email}: {e}")
+                
+                # Atualiza usuário
+                user.last_sync_status = 'error'
+                user.last_sync_message = str(e)
+                
+                # Atualiza log
+                sync_log.finished_at = datetime.utcnow()
+                sync_log.status = 'error'
+                sync_log.message = str(e)
+                
+                db.session.commit()
+                
+                raise
+    
+    def _save_sync_history(self, user, stats, synchronizer):
+        """
+        Salva histórico de atividades sincronizadas no banco
+        
+        Args:
+            user: Usuário
+            stats: Estatísticas da sincronização
+            synchronizer: Instância do Synchronizer
+        """
+        # Carrega histórico do sincronizador
+        history = synchronizer.history.get('synced_activities', {})
+        
+        # Filtra apenas atividades sincronizadas nesta execução
+        # (as que foram adicionadas recentemente)
+        cutoff_time = datetime.utcnow() - timedelta(hours=1)
+        
+        for garmin_id, sync_data in history.items():
+            # Verifica se já existe no banco
+            existing = SyncHistory.query.filter_by(
+                user_id=user.id,
+                garmin_activity_id=garmin_id
+            ).first()
+            
+            if not existing:
+                # Cria novo registro
+                sync_history = SyncHistory(
+                    user_id=user.id,
+                    garmin_activity_id=garmin_id,
+                    nike_activity_id=sync_data.get('nike_id'),
+                    activity_name=sync_data.get('name', 'Atividade'),
+                    activity_type='running',  # TODO: pegar do sync_data
+                    distance=sync_data.get('distance', 0),
+                    duration=0,  # TODO: pegar do sync_data
+                    activity_date=datetime.fromisoformat(sync_data['date'].replace('Z', '+00:00')) 
+                                   if sync_data.get('date') else None,
+                    sync_status='synced'
+                )
+                
+                db.session.add(sync_history)
+        
+        db.session.commit()
+    
+    def sync_all_users(self):
+        """
+        Sincroniza todos os usuários ativos
+        
+        Returns:
+            Dicionário com resultados por usuário
+        """
+        with self.app.app_context():
+            users = User.query.filter_by(
+                is_active=True,
+                sync_enabled=True
+            ).all()
+            
+            logger.info(f"Starting sync for {len(users)} users")
+            
+            results = {}
+            for user in users:
+                if user.has_credentials():
+                    try:
+                        results[user.id] = self.sync_user(user.id)
+                    except Exception as e:
+                        logger.error(f"Error syncing user {user.id}: {e}")
+                        results[user.id] = {'status': 'error', 'message': str(e)}
+                else:
+                    logger.warning(f"User {user.email} has no credentials")
+                    results[user.id] = {'status': 'no_credentials'}
+            
+            logger.info(f"Sync completed for {len(results)} users")
+            
+            return results

@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Garmin → Nike Sync{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </h2>
+            <button id="btnManualSync" class="btn btn-primary" 
+                    {% if not user.has_credentials() %}disabled title="Configure suas credenciais primeiro"{% endif %}>
+                <i class="bi bi-arrow-repeat"></i> Sincronizar Agora
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Status Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">Total Sincronizado</h6>
+                        <h3 class="mb-0" id="totalSynced">{{ user.total_synced }}</h3>
+                    </div>
+                    <i class="bi bi-check-circle text-success fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">Última Sincronização</h6>
+                        <p class="mb-0 small">
+                            {% if user.last_sync %}
+                                {{ user.last_sync.strftime('%d/%m %H:%M') }}
+                            {% else %}
+                                Nunca
+                            {% endif %}
+                        </p>
+                    </div>
+                    <i class="bi bi-clock-history text-primary fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">Status</h6>
+                        <span class="badge {% if user.sync_enabled %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if user.sync_enabled %}Ativo{% else %}Pausado{% endif %}
+                        </span>
+                    </div>
+                    <i class="bi bi-{{ 'play-circle' if user.sync_enabled else 'pause-circle' }} text-{{ 'success' if user.sync_enabled else 'secondary' }} fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">Credenciais</h6>
+                        <span class="badge {% if user.has_credentials() %}bg-success{% else %}bg-warning{% endif %}">
+                            {% if user.has_credentials() %}Configurado{% else %}Pendente{% endif %}
+                        </span>
+                    </div>
+                    <i class="bi bi-key text-{{ 'success' if user.has_credentials() else 'warning' }} fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert se não tiver credenciais -->
+{% if not user.has_credentials() %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle"></i>
+    <strong>Configure suas credenciais!</strong> 
+    Para começar a sincronizar, você precisa 
+    <a href="{{ url_for('credentials') }}" class="alert-link">configurar suas credenciais do Garmin e Nike</a>.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="history-tab" data-bs-toggle="tab" 
+                data-bs-target="#history" type="button" role="tab">
+            <i class="bi bi-list-ul"></i> Histórico de Sincronizações
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="logs-tab" data-bs-toggle="tab" 
+                data-bs-target="#logs" type="button" role="tab">
+            <i class="bi bi-file-earmark-text"></i> Logs
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- Tab: Histórico -->
+    <div class="tab-pane fade show active" id="history" role="tabpanel">
+        {% if recent_syncs %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Atividade</th>
+                                <th>Tipo</th>
+                                <th>Distância</th>
+                                <th>Garmin ID</th>
+                                <th>Nike ID</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sync in recent_syncs %}
+                            <tr>
+                                <td>{{ sync.activity_date.strftime('%d/%m/%Y %H:%M') if sync.activity_date else '-' }}</td>
+                                <td>{{ sync.activity_name }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ sync.activity_type }}</span>
+                                </td>
+                                <td>{{ '%.2f' | format(sync.distance / 1000) }} km</td>
+                                <td><small class="text-muted">{{ sync.garmin_activity_id[:8] }}...</small></td>
+                                <td><small class="text-muted">{{ sync.nike_activity_id[:8] if sync.nike_activity_id else '-' }}...</small></td>
+                                <td>
+                                    <span class="badge {% if sync.sync_status == 'synced' %}bg-success{% elif sync.sync_status == 'duplicate' %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ sync.sync_status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Nenhuma sincronização realizada ainda.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tab: Logs -->
+    <div class="tab-pane fade" id="logs" role="tabpanel">
+        {% if recent_logs %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Status</th>
+                                <th>Encontradas</th>
+                                <th>Sincronizadas</th>
+                                <th>Duplicadas</th>
+                                <th>Erros</th>
+                                <th>Mensagem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>{{ log.started_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <span class="badge {% if log.status == 'success' %}bg-success{% elif log.status == 'running' %}bg-primary{% else %}bg-danger{% endif %}">
+                                        {{ log.status }}
+                                    </span>
+                                </td>
+                                <td>{{ log.total_found or 0 }}</td>
+                                <td>{{ log.total_synced or 0 }}</td>
+                                <td>{{ log.total_duplicates or 0 }}</td>
+                                <td>{{ log.total_errors or 0 }}</td>
+                                <td><small>{{ log.message or '-' }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Nenhum log disponível.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de progresso -->
+<div class="modal fade" id="syncModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Sincronizando...</span>
+                </div>
+                <h5 id="syncModalMessage">Sincronizando atividades...</h5>
+                <p class="text-muted mb-0">Por favor, aguarde.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Sincronização manual
+document.getElementById('btnManualSync')?.addEventListener('click', async function() {
+    const btn = this;
+    const modal = new bootstrap.Modal(document.getElementById('syncModal'));
+    
+    btn.disabled = true;
+    modal.show();
+    
+    try {
+        const response = await fetch('/sync/manual', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        modal.hide();
+        
+        if (data.success) {
+            alert(`✅ Sincronização concluída!\n\n` +
+                  `Total: ${data.stats.total}\n` +
+                  `Sincronizadas: ${data.stats.synced}\n` +
+                  `Duplicadas: ${data.stats.skipped_duplicate}\n` +
+                  `Erros: ${data.stats.errors}`);
+            location.reload();
+        } else {
+            alert('❌ Erro: ' + data.error);
+        }
+    } catch (error) {
+        modal.hide();
+        alert('❌ Erro na sincronização: ' + error.message);
+    } finally {
+        btn.disabled = false;
+    }
+});
+</script>
+{% endblock %}

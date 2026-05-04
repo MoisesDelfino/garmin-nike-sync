@@ -1,54 +1,170 @@
-# 🏃 Garmin → Nike Run Club Sync
+# 🏃‍♂️ Garmin → Nike Run Club Sync
 
-Sincronização automática de atividades do **Garmin Connect** para o **Nike Run Club** usando GitHub Actions.
+<div align="center">
 
-[![Sync Status](https://github.com/SEU_USUARIO/garmin-nike-sync/actions/workflows/sync.yml/badge.svg)](https://github.com/SEU_USUARIO/garmin-nike-sync/actions)
+![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![Status](https://img.shields.io/badge/Status-Production-success.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## 🎯 Características
+**Sincronização automática de corridas do Garmin Connect para o Nike Run Club**
 
-- ✅ **100% Gratuito** - Roda no GitHub Actions (2000 min/mês grátis)
-- ⏰ **Automático** - Sincroniza a cada 15 minutos
-- 🔄 **Sincronização Histórica** - Importa atividades antigas (até 365 dias)
-- 🚫 **Anti-Duplicação** - Detecta e evita atividades duplicadas
-- 📊 **Logs Detalhados** - Histórico completo de sincronizações
-- 🔒 **Seguro** - Credenciais armazenadas em GitHub Secrets
-- 👥 **Multi-User** - Suporta múltiplas contas no mesmo repositório ([guia](MULTI-USER-GUIDE.md))
+[🌐 Web App](#-web-app-recomendado) • [🤖 GitHub Actions](#-github-actions) • [💻 CLI Local](#-cli-local)
 
-## 👤 Single-User vs 👥 Multi-User
+</div>
 
-### Single-User (Padrão)
-✅ Uma conta Garmin → Uma conta Nike  
-✅ Setup mais simples (3 secrets)  
-✅ Ideal para uso pessoal  
+---
 
-**Setup:** [QUICKSTART.md](QUICKSTART.md)
+## 🎯 Escolha sua versão
 
-### Multi-User (Avançado)
-✅ Múltiplas contas Garmin → Múltiplas contas Nike  
-✅ Configuração por arquivo JSON  
-✅ Ideal para família/amigos  
-✅ Históricos e configurações separadas  
+### 🌐 Web App (RECOMENDADO)
 
-**Setup:** [MULTI-USER-GUIDE.md](MULTI-USER-GUIDE.md)
+**✅ APLICAÇÃO 100% FUNCIONAL E ONLINE**
 
-## 📋 Como Funciona
+Interface web completa com dashboard, multi-usuário e sincronização automática.
 
+- ✨ **Interface Web** - Dashboard bonito e fácil de usar
+- 👥 **Multi-usuário** - Cada pessoa tem sua conta
+- 🔐 **Seguro** - Credenciais criptografadas (AES-256)
+- 📊 **Estatísticas** - Veja histórico e logs
+- 🚀 **Deploy Grátis** - Render, Railway ou Heroku
+
+**📖 Documentação:**
+- [STATUS.md](STATUS.md) - **👈 COMECE AQUI! Status completo e guia de uso**
+- [README-WEB.md](README-WEB.md) - Documentação técnica completa
+- [WEB-DEPLOY-GUIDE.md](WEB-DEPLOY-GUIDE.md) - Guia de deploy
+- [QUICKSTART.md](QUICKSTART.md) - Início rápido
+
+**⚡ Quick Start (LOCAL):**
+```bash
+./setup.sh         # Configura tudo automaticamente
+./start.sh         # Inicia servidor + abre navegador
+# Acesse: http://localhost:5000
+# Login: admin@garmin-nike-sync.com / admin123
 ```
-┌──────────────┐      ┌─────────────────┐      ┌──────────────┐
-│   Garmin     │──────>│  GitHub Actions │──────>│  Nike Run    │
-│   Connect    │ A cada│  (Python Script)│ Envia │  Club        │
-└──────────────┘ 15min└─────────────────┘ treino└──────────────┘
+
+**🚀 Status:** ✅ **ONLINE e RODANDO EM http://localhost:5000**
+
+---
+
+### 🤖 GitHub Actions
+---
+
+### 🤖 GitHub Actions
+
+Sincronização automática rodando na nuvem (GitHub) sem servidor próprio.
+
+- ⏰ **Automático** - A cada 15 minutos
+- 💰 **Gratuito** - 2000 min/mês no GitHub
+- 🔒 **Seguro** - Secrets do GitHub
+- 👥 **Multi-user** - Suporta múltiplas contas
+
+**📖 Documentação:** Ver seção abaixo ou arquivos originais do projeto
+
+---
+
+### 💻 CLI Local
+
+Execute manualmente no seu computador quando quiser sincronizar.
+
+```bash
+pip install -r requirements.txt
+python main.py
 ```
 
-1. **A cada 15 minutos**, o GitHub Actions executa automaticamente
-2. **Busca** novas atividades no Garmin Connect
-3. **Verifica** se já existem no Nike Run Club (data/hora + distância)
-4. **Sincroniza** apenas atividades novas
-5. **Salva** histórico no próprio repositório
+**📖 Documentação completa:** Ver código-fonte e comentários
 
-## 🚀 Setup Rápido (5 minutos)
+---
 
-### 1️⃣ Fork este Repositório
+## 📋 Comparação
+
+| Recurso | Web App | GitHub Actions | CLI Local |
+|---------|---------|----------------|-----------|
+| **Interface** | ✅ Dashboard Web | ❌ Apenas logs | ❌ Terminal |
+| **Multi-usuário** | ✅ Sim | ⚠️ Config manual | ❌ Não |
+| **Automático** | ✅ Sim (15min) | ✅ Sim (15min) | ❌ Manual |
+| **Onde roda** | Render/Railway/Heroku | GitHub (nuvem) | Seu PC |
+| **Custo** | 🆓 Grátis | 🆓 Grátis | 🆓 Grátis |
+| **Setup** | 3 minutos | 5 minutos | 1 minuto |
+| **Recomendado** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
+
+---
+
+## 🔑 Como Obter Token Nike
+
+O Nike Run Club não tem API oficial. Métodos para obter token:
+
+### Método 1: Browser DevTools (Mais Fácil)
+1. Acesse [Nike.com](https://www.nike.com) e faça login
+2. Pressione `F12` (DevTools)
+3. Vá em: **Application** → **Cookies** → `nike.com`
+4. Procure: `com.nike.commerce.nikedotcom.access_token`
+5. Copie o valor completo
+
+### Método 2: Mobile App + Proxy
+1. Instale [HTTP Toolkit](https://httptoolkit.tech/) ou Charles Proxy
+2. Configure proxy no celular
+3. Abra Nike Run Club app
+4. Intercepte requisições para `api.nike.com`
+5. Copie header `Authorization: Bearer <TOKEN>`
+
+⚠️ **Importante:** Token expira (~3 meses). Renove quando necessário.
+
+---
+
+## 📊 Histórico de Desenvolvimento
+
+Este projeto evoluiu através de várias versões:
+
+1. **v1.0** - CLI básico (sincronização manual)
+2. **v2.0** - GitHub Actions (automático na nuvem)
+3. **v3.0** - Multi-user support (múltiplas contas)
+4. **v4.0** - **WEB APP** (interface completa) ⭐ **ATUAL**
+
+---
+
+## 🛠️ Tecnologias
+
+- **Python 3.10+**
+- **Flask** - Framework web
+- **SQLAlchemy** - ORM banco de dados
+- **APScheduler** - Tarefas agendadas
+- **Cryptography** - Criptografia de credenciais
+- **garth** - Cliente Garmin Connect
+- **Bootstrap 5** - UI responsivo
+
+---
+
+## 📄 Licença
+
+MIT License - Use livremente!
+
+---
+
+## ⚠️ Disclaimer
+
+Este projeto usa APIs não oficiais:
+- Garmin Connect (via biblioteca `garth`)
+- Nike Run Club (API reverse engineered)
+
+O uso pode violar os Termos de Serviço. Use por sua conta e risco.
+
+---
+
+## 🤝 Contribuições
+
+Contribuições são bem-vindas! Abra Issues ou Pull Requests.
+
+---
+
+<div align="center">
+
+**⭐ Se este projeto te ajudou, considere dar uma estrela! ⭐**
+
+**🏃‍♂️ Feito com ❤️ para corredores 💨**
+
+[🌐 Web App](STATUS.md) • [📖 Docs](README-WEB.md) • [🚀 Deploy](WEB-DEPLOY-GUIDE.md)
+
+</div>
 
 Clique em **Fork** no canto superior direito desta página.
 
