@@ -140,7 +140,6 @@ class SyncManager:
                     
                     # Usa datas se configuradas, senão usa historical_days
                     if user.initial_sync_start_date and user.initial_sync_end_date:
-                        from datetime import datetime
                         start = datetime.combine(user.initial_sync_start_date, datetime.min.time())
                         end = datetime.combine(user.initial_sync_end_date, datetime.max.time())
                         stats = sync.sync_historical(start_date=start, end_date=end)
