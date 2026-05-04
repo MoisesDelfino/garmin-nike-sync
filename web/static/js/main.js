@@ -1,8 +1,8 @@
 // Main JavaScript - Garmin → Nike Sync
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-dismiss alerts after 5 seconds
-    const alerts = document.querySelectorAll('.alert:not(.alert-dismissible)');
+    // Auto-dismiss alerts after 5 seconds (except persistent ones)
+    const alerts = document.querySelectorAll('.alert:not(.alert-dismissible):not(.alert-persistent)');
     alerts.forEach(alert => {
         setTimeout(() => {
             alert.classList.add('fade');
