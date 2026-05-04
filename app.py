@@ -332,7 +332,8 @@ def create_app(config=None):
             'total_synced': total,
             'last_7_days': recent,
             'by_type': {t[0]: t[1] for t in by_type if t[0]},
-            'last_sync': current_user.last_sync.isoformat() if current_user.last_sync else None
+            'last_sync': current_user.last_sync.isoformat() if current_user.last_sync else None,
+            'has_nike_token': bool(current_user.nike_token_enc)
         })
     
     # Tratamento de erros
