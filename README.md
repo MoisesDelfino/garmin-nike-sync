@@ -30,6 +30,7 @@ Interface web completa com dashboard, multi-usuário e sincronização automáti
 
 **📖 Documentação:**
 - [STATUS.md](STATUS.md) - **👈 COMECE AQUI! Status completo e guia de uso**
+- [CONEXAO-AUTOMATICA-NIKE.md](CONEXAO-AUTOMATICA-NIKE.md) - **⚡ NOVO! Conexão automática Nike**
 - [README-WEB.md](README-WEB.md) - Documentação técnica completa
 - [WEB-DEPLOY-GUIDE.md](WEB-DEPLOY-GUIDE.md) - Guia de deploy
 - [QUICKSTART.md](QUICKSTART.md) - Início rápido
