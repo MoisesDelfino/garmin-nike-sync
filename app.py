@@ -467,20 +467,21 @@ def create_app(config=None):
                             nike_activity = {
                                 'type': activity['type'],
                                 'start_time': activity['start_time'].isoformat(),
-                                'duration_seconds': activity['duration_seconds'],
-                                'distance_meters': activity['distance_meters'],
-                                'calories': activity.get('calories'),
-                                'avg_heart_rate': activity.get('avg_heart_rate')
+                                'duration': int(activity['duration_seconds']),
+                                'distance': activity['distance_meters'],
+                                'calories': activity.get('calories') or 0,
+                                'average_hr': activity.get('avg_heart_rate'),
+                                'name': activity.get('activity_name', 'CSV Import')
                             }
                             
                             # Envia para Nike
-                            response = nike_client.upload_activity(**nike_activity)
+                            response = nike_client.create_activity(nike_activity)
                             
                             # Registra no histórico
                             sync_history = SyncHistory(
                                 user_id=current_user.id,
                                 garmin_activity_id=f"csv_{activity['start_time'].strftime('%Y%m%d_%H%M%S')}",
-                                nike_activity_id=response.get('id', 'unknown'),
+                                nike_activity_id=response or 'unknown',
                                 activity_name=activity.get('activity_name', 'CSV Import'),
                                 activity_type=activity['type'],
                                 distance=activity['distance_meters'] / 1000,
@@ -523,21 +524,22 @@ def create_app(config=None):
                     nike_activity = {
                         'type': activity['type'],
                         'start_time': activity['start_time'].isoformat(),
-                        'duration_seconds': activity['duration_seconds'],
-                        'distance_meters': activity['distance_meters'],
-                        'calories': activity.get('calories'),
-                        'avg_heart_rate': activity.get('avg_heart_rate')
+                        'duration': int(activity['duration_seconds']),
+                        'distance': activity['distance_meters'],
+                        'calories': activity.get('calories') or 0,
+                        'average_hr': activity.get('avg_heart_rate'),
+                        'name': filename.rsplit('.', 1)[0]
                     }
                     
                     # Envia para Nike
                     logger.info(f"Uploading {filename} to Nike...")
-                    response = nike_client.upload_activity(**nike_activity)
+                    response = nike_client.create_activity(nike_activity)
                     
                     # Registra no histórico
                     sync_history = SyncHistory(
                         user_id=current_user.id,
                         garmin_activity_id=f"upload_{filename}",
-                        nike_activity_id=response.get('id', 'unknown'),
+                        nike_activity_id=response or 'unknown',
                         activity_name=filename,
                         activity_type=activity['type'],
                         distance=activity['distance_meters'] / 1000,  # km
