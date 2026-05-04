@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conectar Nike - Garmin → Nike Sync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .card { box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .step { opacity: 0.4; transition: all 0.3s; margin-bottom: 2rem; }
+        .step.active { opacity: 1; transform: scale(1.02); }
+        .step.completed { opacity: 0.7; }
+        .bookmarklet-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .bookmarklet-btn {
+            display: inline-block;
+            background: #fff;
+            color: #f5576c;
+            padding: 20px 50px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border-radius: 50px;
+            text-decoration: none;
+            cursor: move;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        .bookmarklet-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+            color: #f5576c;
+        }
+        .drag-hint {
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header bg-primary text-white text-center">
+                        <h3><i class="bi bi-lightning-charge-fill"></i> Conectar Nike Run Club</h3>
+                        <p class="mb-0">Processo super simples em 3 passos</p>
+                    </div>
+                    <div class="card-body p-4">
+                        
+                        <!-- Passo 1: Adicionar Bookmarklet -->
+                        <div id="step1" class="step active">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-primary fs-5 me-3">1</span>
+                                <h5 class="mb-0">Adicione o Botão Mágico</h5>
+                            </div>
+                            
+                            <div class="bookmarklet-box">
+                                <p class="text-white fs-5 mb-3 drag-hint">
+                                    👇 <strong>ARRASTE ESTE BOTÃO PARA OS FAVORITOS</strong> 👇
+                                </p>
+                                
+                                <a href="javascript:(function(){const t=localStorage.getItem('access_token');if(!t){alert('❌ Primeiro faça login no Nike.com!\n\nClique OK e você será redirecionado.');window.location.href='https://www.nike.com/member/settings';return;}fetch('{{ request.url_root }}nike/callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t})}).then(r=>r.json()).then(d=>{if(d.success){alert('✅ Nike conectado com sucesso!\n\nVoltando para o app...');window.location.href='{{ request.url_root }}dashboard';}else{alert('❌ Erro: '+(d.error||'Desconhecido'));}}).catch(e=>alert('❌ Erro de conexão: '+e));})()" 
+                                   class="bookmarklet-btn" 
+                                   draggable="true"
+                                   onclick="event.preventDefault(); alert('⚠️ Não clique aqui!\n\nVocê precisa ARRASTAR este botão para a barra de favoritos do seu navegador.');">
+                                    ⚡ CONECTAR NIKE ⚡
+                                </a>
+                                
+                                <p class="text-white mt-4 mb-0">
+                                    <i class="bi bi-mouse"></i> Clique, segure e arraste para a barra de favoritos
+                                </p>
+                            </div>
+                            
+                            <div class="alert alert-info mt-4">
+                                <h6><i class="bi bi-lightbulb-fill"></i> Como fazer:</h6>
+                                <ol class="mb-2">
+                                    <li>Clique no botão <strong>"⚡ CONECTAR NIKE ⚡"</strong> e <strong>segure</strong></li>
+                                    <li><strong>Arraste</strong> o mouse até a <strong>barra de favoritos</strong> (no topo do navegador)</li>
+                                    <li><strong>Solte</strong> o botão do mouse</li>
+                                </ol>
+                                <p class="mb-0 small text-muted">
+                                    💡 Não consegue ver a barra de favoritos? Pressione <kbd>Ctrl+Shift+B</kbd> (Windows/Linux) ou <kbd>Cmd+Shift+B</kbd> (Mac)
+                                </p>
+                            </div>
+                            
+                            <button class="btn btn-success btn-lg w-100 mt-3" onclick="avancarPasso(2)">
+                                <i class="bi bi-check-circle"></i> Pronto! Adicionei aos favoritos
+                            </button>
+                        </div>
+
+                        <!-- Passo 2: Fazer Login Nike -->
+                        <div id="step2" class="step">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-warning fs-5 me-3">2</span>
+                                <h5 class="mb-0">Faça Login no Nike.com</h5>
+                            </div>
+                            
+                            <p class="mb-3">Agora clique aqui para abrir o Nike.com e fazer login:</p>
+                            
+                            <a href="https://www.nike.com/member/settings" target="_blank" class="btn btn-warning btn-lg w-100 mb-3" onclick="avancarPasso(3)">
+                                <i class="bi bi-box-arrow-up-right"></i> ABRIR NIKE.COM E FAZER LOGIN
+                            </a>
+                            
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle-fill"></i> 
+                                <strong>Importante:</strong> Use o mesmo email e senha da sua conta Nike Run Club
+                            </div>
+                        </div>
+
+                        <!-- Passo 3: Clicar no Favorito -->
+                        <div id="step3" class="step">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-success fs-5 me-3">3</span>
+                                <h5 class="mb-0">Clique no Botão Mágico</h5>
+                            </div>
+                            
+                            <div class="alert alert-success">
+                                <h6 class="mb-3"><i class="bi bi-star-fill"></i> Agora é só clicar!</h6>
+                                
+                                <p>Procure na <strong>barra de favoritos</strong> (no topo do navegador) pelo botão:</p>
+                                
+                                <div class="text-center p-4 bg-white rounded my-3">
+                                    <span style="font-size: 1.5rem; font-weight: bold; color: #f5576c;">⚡ CONECTAR NIKE ⚡</span>
+                                </div>
+                                
+                                <p class="mb-0">
+                                    <strong>Clique nele</strong> na aba do Nike.com e pronto! 
+                                    A conexão será feita automaticamente e você será redirecionado para o dashboard.
+                                </p>
+                            </div>
+                            
+                            <div class="text-center p-4 bg-light rounded">
+                                <div class="spinner-border text-success me-2" role="status"></div>
+                                <p class="mb-0 fw-bold">Aguardando você clicar no favorito...</p>
+                                <p class="small text-muted mb-0 mt-2">Esta página detectará automaticamente quando a conexão for feita</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Card de Ajuda -->
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h6><i class="bi bi-question-circle-fill"></i> Como funciona?</h6>
+                        <p class="small mb-2">
+                            O botão que você arrasta é um <strong>bookmarklet</strong> (favorito com código JavaScript). 
+                            Quando você clica nele estando logado no Nike.com, ele extrai automaticamente 
+                            seu token de acesso e envia para nosso servidor de forma segura.
+                        </p>
+                        <p class="small mb-0">
+                            <i class="bi bi-shield-check"></i> <strong>100% seguro:</strong> 
+                            O código roda apenas no seu navegador e não compartilha nenhuma informação além do token de autenticação.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function avancarPasso(numero) {
+            // Marca passo atual como completado
+            const passoAtual = document.querySelector('.step.active');
+            if (passoAtual) {
+                passoAtual.classList.remove('active');
+                passoAtual.classList.add('completed');
+            }
+            
+            // Ativa próximo passo
+            const proximoPasso = document.getElementById('step' + numero);
+            if (proximoPasso) {
+                proximoPasso.classList.add('active');
+                
+                // Scroll suave
+                proximoPasso.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
+        // Monitora se o token foi salvo (polling)
+        let checkInterval = setInterval(() => {
+            fetch('{{ url_for("api_stats") }}')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.has_nike_token) {
+                        clearInterval(checkInterval);
+                        
+                        // Mostra sucesso
+                        const step3 = document.getElementById('step3');
+                        step3.innerHTML = `
+                            <div class="alert alert-success text-center">
+                                <h3><i class="bi bi-check-circle-fill"></i></h3>
+                                <h5>Nike Conectado com Sucesso!</h5>
+                                <p class="mb-3">Redirecionando para o dashboard...</p>
+                                <div class="spinner-border text-success" role="status"></div>
+                            </div>
+                        `;
+                        
+                        // Redireciona
+                        setTimeout(() => {
+                            window.location.href = '{{ url_for("dashboard") }}';
+                        }, 2000);
+                    }
+                })
+                .catch(() => {});
+        }, 3000);
+    </script>
+</body>
+</html>
