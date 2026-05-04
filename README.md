@@ -46,29 +46,6 @@ Interface web completa com dashboard, multi-usuário e sincronização automáti
 
 ---
 
-### 🔌 Extensão do Navegador (NOVO!)
-
-**Token Nike de forma fácil - 1 clique!**
-
-Extensão Chrome/Firefox que extrai automaticamente o token do Nike Run Club.
-
-- ⚡ **1 Clique** - Extrai token automaticamente
-- 🔒 **Seguro** - Tudo local, nada enviado para servidores
-- 📋 **Fácil** - Copia e cola direto no app
-- 🎨 **Interface Bonita** - Design moderno e intuitivo
-
-**📖 Documentação:**
-- [browser-extension/INSTALL.md](browser-extension/INSTALL.md) - **👈 Guia de instalação**
-- [browser-extension/README.md](browser-extension/README.md) - Documentação completa
-
-**⚡ Quick Start:**
-1. Gere ícones em https://favicon.io (emoji ⚡)
-2. Carregue extensão no Chrome (`chrome://extensions/`)
-3. Faça login no Nike.com
-4. Clique na extensão e extraia o token!
-
----
-
 ### 🤖 GitHub Actions
 ---
 
