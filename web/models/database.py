@@ -85,19 +85,41 @@ class User(UserMixin, db.Model):
     
     def set_garmin_credentials(self, email, password):
         """Armazena credenciais Garmin (criptografadas)"""
-        cipher = self._get_cipher()
-        self.garmin_email_enc = cipher.encrypt(email.encode()).decode()
-        self.garmin_password_enc = cipher.encrypt(password.encode()).decode()
+        from loguru import logger
+        try:
+            cipher = self._get_cipher()
+            self.garmin_email_enc = cipher.encrypt(email.encode()).decode()
+            self.garmin_password_enc = cipher.encrypt(password.encode()).decode()
+            logger.debug(f"✓ Credenciais Garmin criptografadas para user {self.id}")
+            logger.debug(f"  Email length: {len(email)} chars")
+            logger.debug(f"  Password length: {len(password)} chars")
+            logger.debug(f"  Encrypted email length: {len(self.garmin_email_enc)} chars")
+        except Exception as e:
+            logger.error(f"❌ Erro ao criptografar credenciais Garmin: {e}")
+            raise
     
     def get_garmin_credentials(self):
         """Recupera credenciais Garmin (descriptografadas)"""
+        from loguru import logger
         if not self.garmin_email_enc or not self.garmin_password_enc:
+            logger.warning(f"⚠️ Credenciais Garmin não encontradas para user {self.id}")
+            logger.debug(f"  garmin_email_enc exists: {bool(self.garmin_email_enc)}")
+            logger.debug(f"  garmin_password_enc exists: {bool(self.garmin_password_enc)}")
             return None, None
         
-        cipher = self._get_cipher()
-        email = cipher.decrypt(self.garmin_email_enc.encode()).decode()
-        password = cipher.decrypt(self.garmin_password_enc.encode()).decode()
-        return email, password
+        try:
+            cipher = self._get_cipher()
+            email = cipher.decrypt(self.garmin_email_enc.encode()).decode()
+            password = cipher.decrypt(self.garmin_password_enc.encode()).decode()
+            logger.debug(f"✓ Credenciais Garmin descriptografadas para user {self.id}")
+            logger.debug(f"  Email recuperado: {email[:3]}***{email[-10:] if len(email) > 13 else ''}")
+            logger.debug(f"  Password length: {len(password)} chars")
+            return email, password
+        except Exception as e:
+            logger.error(f"❌ Erro ao descriptografar credenciais Garmin: {e}")
+            logger.error(f"  Tipo de erro: {type(e).__name__}")
+            logger.error(f"  Encrypted data exists: email={bool(self.garmin_email_enc)}, pwd={bool(self.garmin_password_enc)}")
+            raise
     
     def set_nike_credentials(self, email, password):
         """Armazena credenciais Nike (criptografadas)"""

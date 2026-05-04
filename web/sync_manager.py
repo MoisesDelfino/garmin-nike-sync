@@ -61,12 +61,21 @@ class SyncManager:
                 logger.info(f"Starting sync for user: {user.email}")
                 
                 # Obtém credenciais
+                logger.debug(f"🔐 Recuperando credenciais do banco de dados...")
                 garmin_email, garmin_password = user.get_garmin_credentials()
                 nike_token = user.get_nike_token()
                 
-                logger.info(f"Garmin email: {garmin_email[:3]}***{garmin_email[-10:] if len(garmin_email) > 13 else ''}")
-                logger.info(f"Nike token exists: {bool(nike_token)}")
-                logger.info(f"Nike status: {user.nike_status}")
+                logger.debug(f"📧 Garmin email recuperado: {garmin_email[:3] if garmin_email else 'NONE'}***")
+                logger.debug(f"🔑 Garmin password existe: {bool(garmin_password)}")
+                logger.debug(f"🏃 Nike token existe: {bool(nike_token)}")
+                logger.debug(f"📊 Nike status: {user.nike_status}")
+                
+                if garmin_email:
+                    logger.info(f"✓ Email Garmin: {garmin_email[:3]}***{garmin_email[-10:] if len(garmin_email) > 13 else ''}")
+                if garmin_password:
+                    logger.info(f"✓ Senha Garmin: {len(garmin_password)} caracteres")
+                else:
+                    logger.error(f"❌ Senha Garmin VAZIA ou NULA")
                 
                 # Verifica se credenciais existem
                 if not garmin_email or not garmin_password:

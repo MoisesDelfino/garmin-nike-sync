@@ -253,12 +253,16 @@ def create_app(config=None):
             
             # Salva credenciais Garmin
             if data.get('garmin_email') and data.get('garmin_password'):
+                logger.info(f"💾 Salvando credenciais Garmin para user: {current_user.email}")
+                logger.debug(f"  Email fornecido: {data['garmin_email'][:3]}***")
+                logger.debug(f"  Senha fornecida: {len(data['garmin_password'])} caracteres")
+                
                 current_user.set_garmin_credentials(
                     data['garmin_email'],
                     data['garmin_password']
                 )
                 has_changes = True
-                logger.info(f"Garmin credentials updated for user: {current_user.email}")
+                logger.success(f"✓ Credenciais Garmin armazenadas no objeto user")
                 flash('Credenciais Garmin salvas com sucesso!', 'success')
             
             # Salva credenciais Nike (admin vai configurar manualmente)
@@ -278,7 +282,24 @@ def create_app(config=None):
                 flash('Credenciais Nike recebidas! Configuraremos sua conta em até 24 horas.', 'info')
             
             if has_changes:
-                db.session.commit()
+                logger.info(f"💾 Fazendo commit das alterações no banco de dados...")
+                try:
+                    db.session.commit()
+                    logger.success(f"✓ Credenciais salvas no banco de dados com sucesso!")
+                    
+                    # Verifica se salvou corretamente
+                    test_email, test_pwd = current_user.get_garmin_credentials()
+                    if test_email and test_pwd:
+                        logger.success(f"✓ Verificação: Credenciais recuperadas com sucesso")
+                        logger.debug(f"  Email recuperado na verificação: {test_email[:3]}***")
+                    else:
+                        logger.error(f"❌ PROBLEMA: Credenciais não puderam ser recuperadas após salvar!")
+                        
+                except Exception as e:
+                    logger.error(f"❌ Erro ao fazer commit: {e}")
+                    db.session.rollback()
+                    flash('Erro ao salvar credenciais. Tente novamente.', 'danger')
+                    raise
             
             return redirect(url_for('credentials'))
         
