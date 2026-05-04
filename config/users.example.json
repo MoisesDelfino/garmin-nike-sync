@@ -1,0 +1,23 @@
+{
+  "users": [
+    {
+      "id": "user1",
+      "name": "Nome do Usuário 1",
+      "enabled": true,
+      "credentials": {
+        "garmin_email_secret": "GARMIN_EMAIL_USER1",
+        "garmin_password_secret": "GARMIN_PASSWORD_USER1",
+        "nike_token_secret": "NIKE_TOKEN_USER1"
+      },
+      "settings": {
+        "historical_sync_days": 365,
+        "time_tolerance_seconds": 300,
+        "distance_tolerance_meters": 50
+      }
+    }
+  ],
+  "global_settings": {
+    "sync_interval_minutes": 15,
+    "log_level": "INFO"
+  }
+}

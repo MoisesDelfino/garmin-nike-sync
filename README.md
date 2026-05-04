@@ -12,6 +12,24 @@ Sincronização automática de atividades do **Garmin Connect** para o **Nike Ru
 - 🚫 **Anti-Duplicação** - Detecta e evita atividades duplicadas
 - 📊 **Logs Detalhados** - Histórico completo de sincronizações
 - 🔒 **Seguro** - Credenciais armazenadas em GitHub Secrets
+- 👥 **Multi-User** - Suporta múltiplas contas no mesmo repositório ([guia](MULTI-USER-GUIDE.md))
+
+## 👤 Single-User vs 👥 Multi-User
+
+### Single-User (Padrão)
+✅ Uma conta Garmin → Uma conta Nike  
+✅ Setup mais simples (3 secrets)  
+✅ Ideal para uso pessoal  
+
+**Setup:** [QUICKSTART.md](QUICKSTART.md)
+
+### Multi-User (Avançado)
+✅ Múltiplas contas Garmin → Múltiplas contas Nike  
+✅ Configuração por arquivo JSON  
+✅ Ideal para família/amigos  
+✅ Históricos e configurações separadas  
+
+**Setup:** [MULTI-USER-GUIDE.md](MULTI-USER-GUIDE.md)
 
 ## 📋 Como Funciona
 

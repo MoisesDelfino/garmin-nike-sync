@@ -2,6 +2,10 @@
 """
 Garmin to Nike Run Club Sync
 Script principal para sincronização automática de atividades
+
+Suporta:
+- Single-user: Configuração via variáveis de ambiente (compatibilidade)
+- Multi-user: Configuração via config/users.json (múltiplas contas)
 """
 
 import os
@@ -13,6 +17,7 @@ from dotenv import load_dotenv
 from src.garmin_client import GarminClient
 from src.nike_client import NikeClient
 from src.synchronizer import Synchronizer
+from src.multi_user import MultiUserManager
 
 
 def setup_logging():
@@ -88,6 +93,59 @@ def main():
     logger.info("=" * 60)
     
     # Carrega configurações
+    load_dotenv()
+    
+    # Detecta modo de operação
+    config_file = "config/users.json"
+    use_multi_user = os.path.exists(config_file)
+    
+    if use_multi_user:
+        logger.info("🔄 Modo: MULTI-USER")
+        run_multi_user_sync()
+    else:
+        logger.info("👤 Modo: SINGLE-USER (compatibilidade)")
+        run_single_user_sync()
+
+
+def run_multi_user_sync():
+    """Executa sincronização multi-usuário"""
+    try:
+        manager = MultiUserManager()
+        
+        # Verifica se há usuários configurados
+        users = manager.get_enabled_users()
+        if not users:
+            logger.error("Nenhum usuário configurado com credenciais válidas")
+            logger.info("Configure usuários em config/users.json")
+            sys.exit(1)
+        
+        # Determina se é primeira execução (qualquer usuário sem histórico)
+        is_first_run = False
+        for user in users:
+            history_file = user.get_history_file()
+            if not os.path.exists(history_file):
+                is_first_run = True
+                break
+        
+        # Sincroniza todos os usuários
+        results = manager.sync_all_users(is_first_run=is_first_run)
+        
+        # Verifica se houve erros
+        total_errors = sum(r['errors'] for r in results.values())
+        if total_errors > 0:
+            logger.warning(f"Sincronização completada com {total_errors} erro(s)")
+            sys.exit(1)
+        else:
+            logger.success("Sincronização multi-user completada com sucesso!")
+            sys.exit(0)
+            
+    except Exception as e:
+        logger.exception(f"Erro na sincronização multi-user: {e}")
+        sys.exit(1)
+
+
+def run_single_user_sync():
+    """Executa sincronização single-user (modo compatibilidade)"""
     config = load_config()
     
     # Inicializa clientes

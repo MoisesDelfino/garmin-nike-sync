@@ -35,7 +35,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: 🔄 Run sync
+      - name: 🔄 Run sync (Multi-User Mode)
+        if: ${{ secrets.MULTI_USER_MODE == 'true' }}
+        env:
+          # As credenciais são carregadas dinamicamente baseadas em config/users.json
+          # Configure os secrets com os nomes especificados no arquivo de configuração
+          # Exemplo: GARMIN_EMAIL_USER1, GARMIN_PASSWORD_USER1, NIKE_TOKEN_USER1
+          
+          # User 1
+          GARMIN_EMAIL_USER1: ${{ secrets.GARMIN_EMAIL_USER1 }}
+          GARMIN_PASSWORD_USER1: ${{ secrets.GARMIN_PASSWORD_USER1 }}
+          NIKE_TOKEN_USER1: ${{ secrets.NIKE_TOKEN_USER1 }}
+          
+          # User 2 (opcional)
+          GARMIN_EMAIL_USER2: ${{ secrets.GARMIN_EMAIL_USER2 }}
+          GARMIN_PASSWORD_USER2: ${{ secrets.GARMIN_PASSWORD_USER2 }}
+          NIKE_TOKEN_USER2: ${{ secrets.NIKE_TOKEN_USER2 }}
+          
+          # User 3 (opcional)
+          GARMIN_EMAIL_USER3: ${{ secrets.GARMIN_EMAIL_USER3 }}
+          GARMIN_PASSWORD_USER3: ${{ secrets.GARMIN_PASSWORD_USER3 }}
+          NIKE_TOKEN_USER3: ${{ secrets.NIKE_TOKEN_USER3 }}
+          
+          # Adicione mais usuários conforme necessário
+        run: python main.py
+      
+      - name: 🔄 Run sync (Single-User Mode - Compatibilidade)
+        if: ${{ secrets.MULTI_USER_MODE != 'true' }}
         env:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
@@ -51,8 +77,8 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "GitHub Actions"
           
-          # Adiciona arquivos de histórico e sessão
-          git add sync_history.json .garth/ 2>/dev/null || true
+          # Adiciona arquivos de histórico (single ou multi-user)
+          git add sync_history*.json config/users.json .garth/ 2>/dev/null || true
           
           # Commit apenas se houver mudanças
           if git diff --staged --quiet; then
