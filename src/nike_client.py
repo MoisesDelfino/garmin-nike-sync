@@ -319,9 +319,9 @@ class NikeClient:
             nike_payload = self._format_for_nike(activity_data)
             
             # DEBUG: Log completo do request
-            logger.debug(f"🔍 DEBUG - Endpoint: {self.ACTIVITY_URL}")
-            logger.debug(f"🔍 DEBUG - Headers: {dict(self.session.headers)}")
-            logger.debug(f"🔍 DEBUG - Payload: {nike_payload}")
+            logger.info(f"🔍 Endpoint: {self.ACTIVITY_URL}")
+            logger.info(f"🔍 Headers: {dict(self.session.headers)}")
+            logger.info(f"🔍 Payload: {nike_payload}")
             
             # Tenta com endpoint /activity (singular)
             response = self.session.post(
@@ -329,9 +329,9 @@ class NikeClient:
                 json=nike_payload
             )
             
-            logger.debug(f"🔍 DEBUG - Response Status: {response.status_code}")
-            logger.debug(f"🔍 DEBUG - Response Headers: {dict(response.headers)}")
-            logger.debug(f"🔍 DEBUG - Response Body: {response.text[:1000]}")
+            logger.info(f"🔍 Response Status: {response.status_code}")
+            logger.info(f"🔍 Response Headers: {dict(response.headers)}")
+            logger.info(f"🔍 Response Body: {response.text[:1000]}")
             
             if response.status_code in [200, 201]:
                 result = response.json()
@@ -348,8 +348,8 @@ class NikeClient:
                     json=[nike_payload]
                 )
                 
-                logger.debug(f"🔍 DEBUG 2 - Response Status: {response2.status_code}")
-                logger.debug(f"🔍 DEBUG 2 - Response Body: {response2.text[:1000]}")
+                logger.info(f"🔍 Response2 Status: {response2.status_code}")
+                logger.info(f"🔍 Response2 Body: {response2.text[:1000]}")
                 
                 if response2.status_code in [200, 201]:
                     result = response2.json()
