@@ -320,7 +320,7 @@ class NikeClient:
             
             response = self.session.post(
                 f"{self.ACTIVITIES_URL}",
-                json=nike_payload
+                json=[nike_payload]  # Envia como array
             )
             
             if response.status_code in [200, 201]:
