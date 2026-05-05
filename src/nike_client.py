@@ -318,25 +318,52 @@ class NikeClient:
             # Formata dados para Nike API
             nike_payload = self._format_for_nike(activity_data)
             
-            # Usa endpoint SINGULAR para criar UMA atividade (objeto, não array)
+            # DEBUG: Log completo do request
+            logger.debug(f"🔍 DEBUG - Endpoint: {self.ACTIVITY_URL}")
+            logger.debug(f"🔍 DEBUG - Headers: {dict(self.session.headers)}")
+            logger.debug(f"🔍 DEBUG - Payload: {nike_payload}")
+            
+            # Tenta com endpoint /activity (singular)
             response = self.session.post(
                 f"{self.ACTIVITY_URL}",
                 json=nike_payload
             )
             
+            logger.debug(f"🔍 DEBUG - Response Status: {response.status_code}")
+            logger.debug(f"🔍 DEBUG - Response Headers: {dict(response.headers)}")
+            logger.debug(f"🔍 DEBUG - Response Body: {response.text[:1000]}")
+            
             if response.status_code in [200, 201]:
                 result = response.json()
                 activity_id = result.get('id')
-                logger.success(f"Atividade criada com sucesso: {activity_id}")
+                logger.success(f"✅ Atividade criada: {activity_id}")
                 return activity_id
             else:
-                logger.error(f"Erro ao criar atividade: {response.status_code}")
-                logger.error(f"Nike response: {response.text[:500]}")
-                logger.error(f"Payload enviado: {nike_payload}")
-                return None
+                logger.error(f"❌ Erro {response.status_code}: {response.text[:500]}")
+                
+                # Se falhou, tenta com endpoint /activities (plural) + array
+                logger.warning("⚠️ Tentando endpoint /activities (plural) com array...")
+                response2 = self.session.post(
+                    f"{self.ACTIVITIES_URL}",
+                    json=[nike_payload]
+                )
+                
+                logger.debug(f"🔍 DEBUG 2 - Response Status: {response2.status_code}")
+                logger.debug(f"🔍 DEBUG 2 - Response Body: {response2.text[:1000]}")
+                
+                if response2.status_code in [200, 201]:
+                    result = response2.json()
+                    activity_id = result.get('id') if isinstance(result, dict) else result[0].get('id')
+                    logger.success(f"✅ Atividade criada (tentativa 2): {activity_id}")
+                    return activity_id
+                else:
+                    logger.error(f"❌ Ambos endpoints falharam!")
+                    return None
                 
         except Exception as e:
-            logger.error(f"Erro ao criar atividade Nike: {e}")
+            logger.error(f"💥 Exception ao criar atividade: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None
     
     def _parse_activity(self, activity: Dict) -> Dict:
