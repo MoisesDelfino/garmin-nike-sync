@@ -318,9 +318,10 @@ class NikeClient:
             # Formata dados para Nike API
             nike_payload = self._format_for_nike(activity_data)
             
+            # Usa endpoint SINGULAR para criar UMA atividade (objeto, não array)
             response = self.session.post(
-                f"{self.ACTIVITIES_URL}",
-                json=[nike_payload]  # Envia como array
+                f"{self.ACTIVITY_URL}",
+                json=nike_payload
             )
             
             if response.status_code in [200, 201]:
